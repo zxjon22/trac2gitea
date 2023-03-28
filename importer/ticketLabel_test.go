@@ -34,7 +34,7 @@ func TestImportTicketComponentAddition(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketComponentAmend(t *testing.T) {
@@ -65,7 +65,7 @@ func TestImportTicketComponentAmend(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketComponentRemoval(t *testing.T) {
@@ -96,7 +96,7 @@ func TestImportTicketComponentRemoval(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketPriorityAddition(t *testing.T) {
@@ -127,7 +127,7 @@ func TestImportTicketPriorityAddition(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketPriorityAmend(t *testing.T) {
@@ -158,7 +158,7 @@ func TestImportTicketPriorityAmend(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketPriorityRemoval(t *testing.T) {
@@ -189,7 +189,7 @@ func TestImportTicketPriorityRemoval(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketResolutionAddition(t *testing.T) {
@@ -220,7 +220,7 @@ func TestImportTicketResolutionAddition(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketResolutionAmend(t *testing.T) {
@@ -251,7 +251,7 @@ func TestImportTicketResolutionAmend(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketResolutionRemoval(t *testing.T) {
@@ -282,7 +282,7 @@ func TestImportTicketResolutionRemoval(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketSeverityAddition(t *testing.T) {
@@ -313,7 +313,7 @@ func TestImportTicketSeverityAddition(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketSeverityAmend(t *testing.T) {
@@ -344,7 +344,7 @@ func TestImportTicketSeverityAmend(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketSeverityRemoval(t *testing.T) {
@@ -375,7 +375,7 @@ func TestImportTicketSeverityRemoval(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketTypeAddition(t *testing.T) {
@@ -406,7 +406,7 @@ func TestImportTicketTypeAddition(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketTypeAmend(t *testing.T) {
@@ -437,7 +437,7 @@ func TestImportTicketTypeAmend(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketTypeRemoval(t *testing.T) {
@@ -468,7 +468,7 @@ func TestImportTicketTypeRemoval(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketVersionAddition(t *testing.T) {
@@ -499,7 +499,7 @@ func TestImportTicketVersionAddition(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketVersionAmend(t *testing.T) {
@@ -530,7 +530,7 @@ func TestImportTicketVersionAmend(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketVersionRemoval(t *testing.T) {
@@ -561,5 +561,5 @@ func TestImportTicketVersionRemoval(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }

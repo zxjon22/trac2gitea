@@ -51,13 +51,13 @@ func (importer *Importer) createIssueComment(issueID int64, change *trac.TicketC
 func (importer *Importer) importTicketChange(
 	issueID int64,
 	change *trac.TicketChange,
-	userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap map[string]string) (int64, error) {
+	userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap map[string]string) (int64, error) {
 	var issueCommentID int64
 	var err error
 
 	switch change.ChangeType {
 	case trac.TicketCommentChange:
-		issueCommentID, err = importer.importCommentIssueComment(issueID, change, userMap)
+		issueCommentID, err = importer.importCommentIssueComment(issueID, change, userMap, revisionMap)
 	case trac.TicketComponentChange:
 		issueCommentID, err = importer.importLabelChangeIssueComment(issueID, change, userMap, componentMap)
 	case trac.TicketMilestoneChange:
@@ -90,10 +90,10 @@ func (importer *Importer) importTicketChanges(
 	ticketID int64,
 	issueID int64,
 	lastUpdate int64,
-	userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap map[string]string) (int64, error) {
+	userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap map[string]string) (int64, error) {
 	commentLastUpdate := lastUpdate
 	err := importer.tracAccessor.GetTicketChanges(ticketID, func(change *trac.TicketChange) error {
-		commentID, err := importer.importTicketChange(issueID, change, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+		commentID, err := importer.importTicketChange(issueID, change, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 		if err != nil {
 			return err
 		}

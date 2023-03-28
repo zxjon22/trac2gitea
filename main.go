@@ -34,6 +34,7 @@ var userMapInputFile string
 var userMapOutputFile string
 var labelMapInputFile string
 var labelMapOutputFile string
+var revisionMapFile string
 var giteaWikiRepoURL string
 var giteaWikiRepoToken string
 var giteaWikiRepoDir string
@@ -69,7 +70,7 @@ func parseArgs() {
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr,
-			"Usage: %s [options] <trac-root> <gitea-root> <gitea-org> <gitea-repo> [<user-map>] [<label-map>]\n",
+			"Usage: %s [options] <trac-root> <gitea-root> <gitea-org> <gitea-repo> [<user-map>] [<label-map>] [<revision-map>]\n",
 			os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		pflag.PrintDefaults()
@@ -93,7 +94,7 @@ func parseArgs() {
 	giteaWikiRepoDir = *wikiDirParam
 	giteaMainConfigPath = *giteaMainConfigPathParam
 
-	if (pflag.NArg() < 4) || (pflag.NArg() > 6) {
+	if (pflag.NArg() < 4) || (pflag.NArg() > 7) {
 		pflag.Usage()
 		os.Exit(1)
 	}
@@ -120,13 +121,17 @@ func parseArgs() {
 		}
 	}
 
+	if pflag.NArg() > 6 {
+		revisionMapFile = pflag.Arg(6)
+	}
+
 	if giteaDefaultUser = *giteaDefaultUserParam; giteaDefaultUser == "" {
 		giteaDefaultUser = giteaOrg
 	}
 }
 
 // importData imports the non-wiki Trac data.
-func importData(dataImporter *importer.Importer, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap map[string]string) error {
+func importData(dataImporter *importer.Importer, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap map[string]string) error {
 	var err error
 	if err = dataImporter.ImportComponents(componentMap); err != nil {
 		return err
@@ -149,7 +154,7 @@ func importData(dataImporter *importer.Importer, userMap, componentMap, priority
 	if err = dataImporter.ImportMilestones(); err != nil {
 		return err
 	}
-	if err = dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap); err != nil {
+	if err = dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap); err != nil {
 		return err
 	}
 
@@ -157,9 +162,9 @@ func importData(dataImporter *importer.Importer, userMap, componentMap, priority
 }
 
 // performImport performs the actual import
-func performImport(dataImporter *importer.Importer, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap map[string]string) error {
+func performImport(dataImporter *importer.Importer, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap map[string]string) error {
 	if !wikiOnly {
-		if err := importData(dataImporter, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap); err != nil {
+		if err := importData(dataImporter, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap); err != nil {
 			dataImporter.RollbackImport()
 			return err
 		}
@@ -243,7 +248,13 @@ func main() {
 		return
 	}
 
-	err = performImport(dataImporter, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	revisionMap, err := readRevisionMap(revisionMapFile)
+	if err != nil {
+		log.Fatal("%+v", err)
+		return
+	}
+
+	err = performImport(dataImporter, userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 	if err != nil {
 		log.Fatal("%+v", err)
 		return

@@ -10,7 +10,7 @@ import (
 )
 
 // importCommentIssueComment imports a Trac ticket comment into Gitea, returns id of created Gitea issue comment or NullID if cannot create comment
-func (importer *Importer) importCommentIssueComment(issueID int64, change *trac.TicketChange, userMap map[string]string) (int64, error) {
+func (importer *Importer) importCommentIssueComment(issueID int64, change *trac.TicketChange, userMap, revisionMap map[string]string) (int64, error) {
 	issueComment, err := importer.createIssueComment(issueID, change, userMap)
 	if err != nil {
 		return gitea.NullID, err
@@ -18,6 +18,7 @@ func (importer *Importer) importCommentIssueComment(issueID int64, change *trac.
 
 	issueComment.CommentType = gitea.CommentIssueCommentType
 	issueComment.Text = importer.markdownConverter.TicketConvert(change.TicketID, change.NewValue)
+	issueComment.Text = MapRevisions(issueComment.Text, revisionMap)
 
 	issueCommentID, err := importer.giteaAccessor.AddIssueComment(issueID, issueComment)
 	if err != nil {

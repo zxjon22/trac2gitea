@@ -10,7 +10,7 @@ import (
 )
 
 // importTicket imports a Trac ticket as a Gitea issue, returning the id of the created issue or gitea.NullID if the issue was not created.
-func (importer *Importer) importTicket(ticket *trac.Ticket, closed bool, userMap map[string]string) (int64, error) {
+func (importer *Importer) importTicket(ticket *trac.Ticket, closed bool, userMap, revisionMap map[string]string) (int64, error) {
 	reporterID, err := importer.getUserID(ticket.Reporter, userMap)
 	if err != nil {
 		return gitea.NullID, err
@@ -33,6 +33,7 @@ func (importer *Importer) importTicket(ticket *trac.Ticket, closed bool, userMap
 	}
 
 	convertedDescription := importer.markdownConverter.TicketConvert(ticket.TicketID, ticket.Description)
+	convertedDescription = MapRevisions(convertedDescription, revisionMap)
 	issue := gitea.Issue{Index: ticket.TicketID, Summary: ticket.Summary, ReporterID: reporterID,
 		Milestone: ticket.MilestoneName, OriginalAuthorID: 0, OriginalAuthorName: originalAuthorName,
 		Closed: closed, Description: convertedDescription, Created: ticket.Created, Updated: ticket.Updated}
@@ -66,10 +67,10 @@ func (importer *Importer) importTicket(ticket *trac.Ticket, closed bool, userMap
 
 // ImportTickets imports Trac tickets as Gitea issues.
 func (importer *Importer) ImportTickets(
-	userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap map[string]string) error {
+	userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap map[string]string) error {
 	err := importer.tracAccessor.GetTickets(func(ticket *trac.Ticket) error {
 		closed := (ticket.Status == string(trac.TicketStatusClosed))
-		issueID, err := importer.importTicket(ticket, closed, userMap)
+		issueID, err := importer.importTicket(ticket, closed, userMap, revisionMap)
 		if err != nil {
 			return err
 		}
@@ -107,12 +108,13 @@ func (importer *Importer) ImportTickets(
 			return err
 		}
 
-		lastUpdate, err := importer.importTicketAttachments(ticket.TicketID, issueID, ticket.Created, userMap)
+		lastUpdate, err := importer.importTicketAttachments(ticket.TicketID, issueID, ticket.Created, userMap, revisionMap)
 		if err != nil {
 			return err
 		}
 		lastUpdate, err = importer.importTicketChanges(ticket.TicketID, issueID, lastUpdate,
-			userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+			userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap,
+			revisionMap)
 		if err != nil {
 			return err
 		}
