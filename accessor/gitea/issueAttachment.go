@@ -7,6 +7,7 @@ package gitea
 import (
 	"database/sql"
 	"fmt"
+	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -39,34 +40,53 @@ func (accessor *DefaultAccessor) GetIssueAttachmentUUID(issueID int64, fileName 
 }
 
 // getAttachmentPath returns the path at which to store an attachment with a given UUID
-func (accessor *DefaultAccessor) getAttachmentPath(UUID string) string {
+func (accessor *DefaultAccessor) getAttachmentPath(UUID string) (string, error) {
 	attachmentsRootDir := accessor.GetStringConfig("attachment", "PATH")
 	if attachmentsRootDir == "" {
 		attachmentsRootDir = filepath.Join(accessor.rootDir, "data", "attachments")
 	}
 
+	if _, err := os.Stat(attachmentsRootDir); os.IsNotExist(err) {
+		return "", errors.Wrap(err, "Attachments folder does not exist - aborting")
+	}
+
 	d1 := UUID[0:1]
 	d2 := UUID[1:2]
-	return filepath.Join(attachmentsRootDir, d1, d2, UUID)
+	dir := filepath.Join(attachmentsRootDir, d1, d2)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return "", err
+	}
+
+	return filepath.Join(dir, UUID), nil
 }
 
 // copyAttachment copies a given attachment file to the Gitea attachment with the given UUID
 func (accessor *DefaultAccessor) copyAttachment(filePath string, UUID string) error {
-	attachmentPath := accessor.getAttachmentPath(UUID)
+	attachmentPath, err := accessor.getAttachmentPath(UUID)
+
+	if err != nil {
+		return err
+	}
+
 	return copyFile(filePath, attachmentPath)
 }
 
 // deleteAttachment deletes the Gitea attachment with the given UUID
 func (accessor *DefaultAccessor) deleteAttachment(UUID string) error {
-	attachmentPath := accessor.getAttachmentPath(UUID)
+	attachmentPath, err := accessor.getAttachmentPath(UUID)
+
+	if err != nil {
+		return err
+	}
+
 	return deleteFile(attachmentPath)
 }
 
 // updateIssueAttachment updates an existing issue attachment
 func (accessor *DefaultAccessor) updateIssueAttachment(issueAttachmentID int64, issueID int64, attachment *IssueAttachment, filePath string) error {
 	_, err := accessor.db.Exec(`
-		UPDATE attachment SET uuid=?, issue_id=?, comment_id=?, name=?, created_unix=? WHERE id=?`,
-		attachment.UUID, issueID, attachment.CommentID, attachment.FileName, attachment.Time, issueAttachmentID)
+		UPDATE attachment SET uuid=?, issue_id=?, comment_id=?, name=?, created_unix=?, size=? WHERE id=?`,
+		attachment.UUID, issueID, attachment.CommentID, attachment.FileName, attachment.Time, attachment.Size, issueAttachmentID)
 
 	if err != nil {
 		err = errors.Wrapf(err, "updating attachment %s for issue %d", attachment.FileName, issueID)
@@ -82,8 +102,8 @@ func (accessor *DefaultAccessor) updateIssueAttachment(issueAttachmentID int64, 
 func (accessor *DefaultAccessor) insertIssueAttachment(issueID int64, attachment *IssueAttachment, filePath string) (int64, error) {
 	_, err := accessor.db.Exec(`
 		INSERT INTO attachment(
-			uuid, issue_id, comment_id, name, created_unix)
-			VALUES ($1, $2, $3, $4, $5)`, attachment.UUID, issueID, attachment.CommentID, attachment.FileName, attachment.Time)
+			uuid, issue_id, comment_id, name, created_unix, size)
+			VALUES ($1, $2, $3, $4, $5, $6)`, attachment.UUID, issueID, attachment.CommentID, attachment.FileName, attachment.Time, attachment.Size)
 	if err != nil {
 		err = errors.Wrapf(err, "adding attachment %s for issue %d", attachment.FileName, issueID)
 		return NullID, err
