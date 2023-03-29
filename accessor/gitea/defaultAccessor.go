@@ -72,12 +72,12 @@ func CreateDefaultAccessor(
 		return nil, err
 	}
 
-	giteaMainConfigPath := "/etc/gitea/conf/app.ini"
+	giteaMainConfigPath := "/etc/gitea/app.ini"
 	giteaMainConfig, err := fetchConfig(giteaMainConfigPath)
 	if err != nil {
 		return nil, err
 	}
-	giteaCustomConfigPath := fmt.Sprintf("%s/custom/conf/app.ini", giteaRootDir)
+	giteaCustomConfigPath := fmt.Sprintf("%s/conf/app.ini", giteaRootDir)
 	giteaCustomConfig, err := fetchConfig(giteaCustomConfigPath)
 	if err != nil {
 		return nil, err
