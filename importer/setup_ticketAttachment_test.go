@@ -131,6 +131,7 @@ func expectIssueAttachmentAddition(t *testing.T, ticket *TicketImport, ticketAtt
 			assertEquals(t, issueAttachment.CommentID, ticketAttachment.comment.issueCommentID)
 			assertEquals(t, issueAttachment.FileName, ticketAttachment.filename)
 			assertEquals(t, issueAttachment.Time, ticketAttachment.comment.time)
+			assertEquals(t, issueAttachment.Size, ticketAttachment.size)
 			return ticketAttachment.issueAttachmentID, nil
 		})
 }
