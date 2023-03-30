@@ -117,6 +117,13 @@ func (importer *Importer) ImportTickets(
 			return err
 		}
 
+		// If closed, set closed date here to lastUpdate!
+		if closed {
+			if err = importer.giteaAccessor.SetIssueClosedTime(issueID, lastUpdate); err != nil {
+				return err
+			}
+		}
+
 		if err = importer.giteaAccessor.SetIssueUpdateTime(issueID, lastUpdate); err != nil {
 			return err
 		}
@@ -128,7 +135,6 @@ func (importer *Importer) ImportTickets(
 		if err = importer.giteaAccessor.UpdateIssueIndex(issueID, ticket.TicketID); err != nil {
 			return err
 		}
-
 		return nil
 	})
 	if err != nil {

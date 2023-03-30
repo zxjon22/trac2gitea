@@ -69,9 +69,9 @@ func (accessor *DefaultAccessor) insertIssue(issue *Issue) (int64, error) {
 	}
 
 	_, err = accessor.db.Exec(`
-		INSERT INTO issue("index", repo_id, name, poster_id, milestone_id, original_author_id, original_author, is_pull, is_closed, content, created_unix)
-			SELECT $1, $2, $3, $4, $5, $6, $7, 0, $8, $9, $10`,
-		issue.Index, accessor.repoID, issue.Summary, issue.ReporterID, milestoneID, nullOwnerID, issue.OriginalAuthorName, issue.Closed, issue.Description, issue.Created)
+		INSERT INTO issue("index", repo_id, name, poster_id, milestone_id, original_author_id, original_author, is_pull, is_closed, content, created_unix, updated_unix, closed_unix)
+			SELECT $1, $2, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12`,
+		issue.Index, accessor.repoID, issue.Summary, issue.ReporterID, milestoneID, nullOwnerID, issue.OriginalAuthorName, issue.Closed, issue.Description, issue.Created, issue.Updated, 0)
 	if err != nil {
 		err = errors.Wrapf(err, "adding issue with index %d", issue.Index)
 		return NullID, err
@@ -110,6 +110,17 @@ func (accessor *DefaultAccessor) AddIssue(issue *Issue) (int64, error) {
 	}
 
 	return issueID, nil
+}
+
+// SetIssueClosedTime sets the date/time a given Gitea issue was closed.
+func (accessor *DefaultAccessor) SetIssueClosedTime(issueID int64, updateTime int64) error {
+	_, err := accessor.db.Exec(`UPDATE issue SET closed_unix = MAX(closed_unix,$1) WHERE id = $2`, updateTime, issueID)
+	if err != nil {
+		err = errors.Wrapf(err, "setting closed time for issue %d", issueID)
+		return err
+	}
+
+	return nil
 }
 
 // SetIssueUpdateTime sets the update time on a given Gitea issue.
