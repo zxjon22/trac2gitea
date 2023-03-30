@@ -40,6 +40,73 @@ func TestMultiLineCodeBlock(t *testing.T) {
 			trailingText)
 }
 
+func TestCodeBlockWithCommitTicketReference(t *testing.T) {
+	setUp(t)
+	defer tearDown(t)
+
+	codeLine1 := "#!CommitTicketReference repository=\"\" revision=\"4574\"\n"
+	codeLine2 := "Remove CommitTicketReference\n"
+
+	conversion := converter.WikiConvert(
+		wikiPage,
+		leadingText+"\n"+
+			"{{{"+codeLine1+
+			codeLine2+
+			"}}}\n"+
+			trailingText)
+	assertEquals(t, conversion,
+		leadingText+"\n"+
+			"```\n"+
+			codeLine2+
+			"```\n"+
+			trailingText)
+}
+
+func TestCodeBlockWithLanguage(t *testing.T) {
+	setUp(t)
+	defer tearDown(t)
+
+	codeLine1 := "#!cpp\n"
+	codeLine2 := "This is some C++\n"
+
+	conversion := converter.WikiConvert(
+		wikiPage,
+		leadingText+"\n"+
+			"{{{"+codeLine1+
+			codeLine2+
+			"}}}\n"+
+			trailingText)
+	assertEquals(t, conversion,
+		leadingText+"\n"+
+			"```cpp\n"+
+			codeLine2+
+			"```\n"+
+			trailingText)
+}
+
+func TestCodeBlockWithMappedLanguage(t *testing.T) {
+	setUp(t)
+	defer tearDown(t)
+
+	codeLine1 := "#!c++\n"
+	codeLine2 := "This is some C++\n"
+
+	// NOTE: We also check \n after {{{ here
+	conversion := converter.WikiConvert(
+		wikiPage,
+		leadingText+"\n"+
+			"{{{\n"+codeLine1+
+			codeLine2+
+			"}}}\n"+
+			trailingText)
+	assertEquals(t, conversion,
+		leadingText+"\n"+
+			"```cpp\n"+
+			codeLine2+
+			"```\n"+
+			trailingText)
+}
+
 func TestNoConversionInsideCodeBlock(t *testing.T) {
 	setUp(t)
 	defer tearDown(t)
