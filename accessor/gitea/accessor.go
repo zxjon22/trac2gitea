@@ -109,6 +109,9 @@ type Accessor interface {
 	// SetIssueUpdateTime sets the update time on a given Gitea issue.
 	SetIssueUpdateTime(issueID int64, updateTime int64) error
 
+	// SetIssueClosedTime sets the date/time a given Gitea issue was closed.
+	SetIssueClosedTime(issueID int64, updateTime int64) error
+
 	// GetIssueURL retrieves a URL for viewing a given issue
 	GetIssueURL(issueID int64) string
 

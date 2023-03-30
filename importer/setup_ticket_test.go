@@ -339,6 +339,13 @@ func expectRepoIssueIndexUpdates(t *testing.T, issueID, ticketID int64) {
 		Return(nil)
 }
 
+func expectIssueClosedTimeUpdate(t *testing.T, issueID int64) {
+	mockGiteaAccessor.
+		EXPECT().
+		SetIssueClosedTime(issueID, gomock.Any()).
+		Return(nil)
+}
+
 func expectAllTicketActions(t *testing.T, ticket *TicketImport) {
 	// expect to lookup Gitea equivalents of Trac ticket owner and reporter
 	expectUserLookup(t, ticket.owner)
@@ -360,4 +367,9 @@ func expectAllTicketActions(t *testing.T, ticket *TicketImport) {
 
 	// expect the repo issue index to be updated
 	expectRepoIssueIndexUpdates(t, ticket.issueID, ticket.ticketID)
+
+	// expect closed tickets to have their closed date/time set
+	if ticket.closed {
+		expectIssueClosedTimeUpdate(t, ticket.issueID)
+	}
 }
