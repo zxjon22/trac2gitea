@@ -332,6 +332,13 @@ func expectIssueCountUpdates(t *testing.T) {
 		Return(nil)
 }
 
+func expectRepoIssueIndexUpdates(t *testing.T, issueID, ticketID int64) {
+	mockGiteaAccessor.
+		EXPECT().
+		UpdateIssueIndex(issueID, ticketID).
+		Return(nil)
+}
+
 func expectAllTicketActions(t *testing.T, ticket *TicketImport) {
 	// expect to lookup Gitea equivalents of Trac ticket owner and reporter
 	expectUserLookup(t, ticket.owner)
@@ -350,4 +357,7 @@ func expectAllTicketActions(t *testing.T, ticket *TicketImport) {
 	expectIssueLabelCreation(t, ticket, ticket.severityLabel)
 	expectIssueLabelCreation(t, ticket, ticket.typeLabel)
 	expectIssueLabelCreation(t, ticket, ticket.versionLabel)
+
+	// expect the repo issue index to be updated
+	expectRepoIssueIndexUpdates(t, ticket.issueID, ticket.ticketID)
 }

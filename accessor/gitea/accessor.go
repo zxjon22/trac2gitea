@@ -115,6 +115,9 @@ type Accessor interface {
 	// UpdateIssueCommentCount updates the count of comments a given issue
 	UpdateIssueCommentCount(issueID int64) error
 
+	// UpdateIssueIndex updates the issue_index table after adding a new issue
+	UpdateIssueIndex(issueID, ticketID int64) error
+
 	/*
 	 * Issue Assignees
 	 */

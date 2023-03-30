@@ -142,3 +142,19 @@ func (accessor *DefaultAccessor) UpdateIssueCommentCount(issueID int64) error {
 
 	return nil
 }
+
+// UpdateIssueIndex updates the issue_index table after adding a new issue
+func (accessor *DefaultAccessor) UpdateIssueIndex(issueID, ticketID int64) error {
+	err := accessor.db.QueryRow(`SELECT group_id FROM issue_index WHERE group_id = $1`, accessor.repoID).Scan()
+	if err == sql.ErrNoRows {
+		_, err = accessor.db.Exec(`
+		INSERT INTO issue_index (group_id, max_index) VALUES ($1, $2)
+		`, accessor.repoID, ticketID)
+	} else {
+		_, err = accessor.db.Exec(`
+		UPDATE issue_index SET max_index = MAX(max_index, $1) WHERE group_id = $2
+		`, ticketID, accessor.repoID)
+	}
+
+	return err
+}
