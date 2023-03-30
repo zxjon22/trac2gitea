@@ -26,7 +26,8 @@ var wikiConvertPredefineds bool
 var generateMaps bool
 var tracRootDir string
 var giteaRootDir string
-var giteaUser string
+var giteaDefaultUser string
+var giteaOrg string
 var giteaRepo string
 var userMapInputFile string
 var userMapOutputFile string
@@ -38,6 +39,8 @@ var giteaWikiRepoDir string
 
 // parseArgs parses the command line arguments, populating the variables above.
 func parseArgs() {
+	giteaDefaultUserParam := pflag.String("default-user", "",
+		"Fallback Gitea user if a Trac user cannot be mapped to an existing Gitea user. Defaults to <gitea-org>")
 	wikiURLParam := pflag.String("wiki-url", "",
 		"URL of wiki repository - defaults to <server-root-url>/<gitea-user>/<gitea-repo>.wiki.git")
 	wikiTokenParam := pflag.String("wiki-token", "",
@@ -62,7 +65,7 @@ func parseArgs() {
 
 	pflag.Usage = func() {
 		fmt.Fprintf(os.Stderr,
-			"Usage: %s [options] <trac-root> <gitea-root> <gitea-user> <gitea-repo> [<user-map>] [<label-map>]\n",
+			"Usage: %s [options] <trac-root> <gitea-root> <gitea-org> <gitea-repo> [<user-map>] [<label-map>]\n",
 			os.Args[0])
 		fmt.Fprintf(os.Stderr, "Options:\n")
 		pflag.PrintDefaults()
@@ -92,7 +95,7 @@ func parseArgs() {
 
 	tracRootDir = pflag.Arg(0)
 	giteaRootDir = pflag.Arg(1)
-	giteaUser = pflag.Arg(2)
+	giteaOrg = pflag.Arg(2)
 	giteaRepo = pflag.Arg(3)
 	if pflag.NArg() > 4 {
 		userMapFile := pflag.Arg(4)
@@ -110,6 +113,10 @@ func parseArgs() {
 		} else {
 			labelMapInputFile = labelMapFile
 		}
+	}
+
+	if giteaDefaultUser = *giteaDefaultUserParam; giteaDefaultUser == "" {
+		giteaDefaultUser = giteaOrg
 	}
 }
 
@@ -170,13 +177,13 @@ func createImporter() (*importer.Importer, error) {
 		return nil, err
 	}
 	giteaAccessor, err := gitea.CreateDefaultAccessor(
-		giteaRootDir, giteaUser, giteaRepo, giteaWikiRepoURL, giteaWikiRepoToken, giteaWikiRepoDir, overwrite, wikiPush)
+		giteaRootDir, giteaOrg, giteaRepo, giteaWikiRepoURL, giteaWikiRepoToken, giteaWikiRepoDir, overwrite, wikiPush)
 	if err != nil {
 		return nil, err
 	}
 	markdownConverter := markdown.CreateDefaultConverter(tracAccessor, giteaAccessor)
 
-	dataImporter, err := importer.CreateImporter(tracAccessor, giteaAccessor, markdownConverter, giteaUser, wikiConvertPredefineds)
+	dataImporter, err := importer.CreateImporter(tracAccessor, giteaAccessor, markdownConverter, giteaDefaultUser, wikiConvertPredefineds)
 	if err != nil {
 		return nil, err
 	}
