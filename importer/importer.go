@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/stevejefferson/trac2gitea/markdown"
 
 	"github.com/stevejefferson/trac2gitea/accessor/gitea"
@@ -35,6 +36,11 @@ func CreateImporter(
 	if err != nil {
 		return nil, err
 	}
+
+	if dfltAuthorID == gitea.NullID {
+		return nil, errors.Errorf("Could not find default user, '%s'", dfltAuthor)
+	}
+
 	importer := Importer{tracAccessor: tAccessor, giteaAccessor: gAccessor, markdownConverter: converter, defaultAuthorID: dfltAuthorID, convertPredefineds: convertPredefs}
 
 	return &importer, nil
