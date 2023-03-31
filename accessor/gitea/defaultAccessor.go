@@ -55,6 +55,7 @@ func fetchConfig(configPath string) (*ini.File, error) {
 // CreateDefaultAccessor returns a new Gitea default accessor.
 func CreateDefaultAccessor(
 	giteaRootDir string,
+	giteaMainConfigPath string,
 	giteaUserName string,
 	giteaRepoName string,
 	giteaWikiRepoURL string,
@@ -72,19 +73,38 @@ func CreateDefaultAccessor(
 		return nil, err
 	}
 
-	giteaMainConfigPath := "/etc/gitea/app.ini"
-	giteaMainConfig, err := fetchConfig(giteaMainConfigPath)
-	if err != nil {
-		return nil, err
-	}
-	giteaCustomConfigPath := fmt.Sprintf("%s/conf/app.ini", giteaRootDir)
-	giteaCustomConfig, err := fetchConfig(giteaCustomConfigPath)
-	if err != nil {
-		return nil, err
+	// If a Gitea app.ini file was passed from the command line, use that. Otherwise,
+	// use the previous behaviour (search expected paths)
+	var giteaMainConfig, giteaCustomConfig *ini.File
+	var giteaCustomConfigPath string
+
+	if giteaMainConfigPath == "" {
+		// Search standard locations
+		giteaMainConfigPath = "/etc/gitea/app.ini"
+		giteaMainConfig, err = fetchConfig(giteaMainConfigPath)
+		if err != nil {
+			return nil, err
+		}
+
+		giteaCustomConfigPath = fmt.Sprintf("%s/conf/app.ini", giteaRootDir)
+		giteaCustomConfig, err = fetchConfig(giteaCustomConfigPath)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// Passed from command line
+		giteaMainConfig, err = fetchConfig(giteaMainConfigPath)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if giteaMainConfig == nil && giteaCustomConfig == nil {
-		err = fmt.Errorf("cannot find Gitea config in %s or %s", giteaMainConfigPath, giteaCustomConfigPath)
+		if giteaCustomConfigPath == "" {
+			err = fmt.Errorf("cannot find Gitea config in '%s'", giteaMainConfigPath)
+		} else {
+			err = fmt.Errorf("cannot find Gitea config in '%s' or '%s'", giteaMainConfigPath, giteaCustomConfigPath)
+		}
 		return nil, err
 	}
 

@@ -26,6 +26,7 @@ var wikiConvertPredefineds bool
 var generateMaps bool
 var tracRootDir string
 var giteaRootDir string
+var giteaMainConfigPath string
 var giteaDefaultUser string
 var giteaOrg string
 var giteaRepo string
@@ -39,6 +40,9 @@ var giteaWikiRepoDir string
 
 // parseArgs parses the command line arguments, populating the variables above.
 func parseArgs() {
+	giteaMainConfigPathParam := pflag.String("app-ini", "",
+		"Path to Gitea configuration file (app.ini). If not set, fetch the configuration from the standard locations. "+
+			"Useful if Gitea is running in a Docker container and you need a separate configuration file to reference the data on the host volumes.")
 	giteaDefaultUserParam := pflag.String("default-user", "",
 		"Fallback Gitea user if a Trac user cannot be mapped to an existing Gitea user. Defaults to <gitea-org>")
 	wikiURLParam := pflag.String("wiki-url", "",
@@ -87,6 +91,7 @@ func parseArgs() {
 	giteaWikiRepoURL = *wikiURLParam
 	giteaWikiRepoToken = *wikiTokenParam
 	giteaWikiRepoDir = *wikiDirParam
+	giteaMainConfigPath = *giteaMainConfigPathParam
 
 	if (pflag.NArg() < 4) || (pflag.NArg() > 6) {
 		pflag.Usage()
@@ -177,7 +182,7 @@ func createImporter() (*importer.Importer, error) {
 		return nil, err
 	}
 	giteaAccessor, err := gitea.CreateDefaultAccessor(
-		giteaRootDir, giteaOrg, giteaRepo, giteaWikiRepoURL, giteaWikiRepoToken, giteaWikiRepoDir, overwrite, wikiPush)
+		giteaRootDir, giteaMainConfigPath, giteaOrg, giteaRepo, giteaWikiRepoURL, giteaWikiRepoToken, giteaWikiRepoDir, overwrite, wikiPush)
 	if err != nil {
 		return nil, err
 	}
