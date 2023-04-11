@@ -5,33 +5,35 @@
 package gitea
 
 import (
-	"database/sql"
-
 	"github.com/pkg/errors"
 	"github.com/stevejefferson/trac2gitea/log"
+	"gorm.io/gorm"
 )
 
 // getIssueParticipantID retrieves the id of the given issue participant, returns NullID if no such participant
 func (accessor *DefaultAccessor) getIssueParticipantID(issueID int64, userID int64) (int64, error) {
-	var issueParticipantID = NullID
-	err := accessor.db.QueryRow(`
-		SELECT id FROM issue_user WHERE issue_id = $1 AND uid = $2
-		`, issueID, userID).Scan(&issueParticipantID)
-	if err != nil && err != sql.ErrNoRows {
+	var id = NullID
+	err := accessor.db.Model(&IssueUser{}).
+		Where("issue_id=? AND uid=?", issueID, userID).
+		Limit(1).
+		Pluck("id", &id).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving id for participant %d in issue %d", userID, issueID)
 		return NullID, err
 	}
 
-	return issueParticipantID, nil
+	return id, nil
 }
 
 // updateIssueParticipant updates an existing issue participant
 func (accessor *DefaultAccessor) updateIssueParticipant(issueParticipantID int64, issueID int64, userID int64) error {
-	_, err := accessor.db.Exec(`UPDATE issue_user SET issue_id=?, uid=? WHERE id=?`,
-		issueID, userID, issueParticipantID)
-	if err != nil {
-		err = errors.Wrapf(err, "updating participant %d in issue %d", userID, issueID)
-		return err
+	if err := accessor.db.Model(&IssueUser{}).
+		Where("id=?", issueParticipantID).
+		Updates(map[string]interface{}{"issue_id": issueID, "uid": userID}).
+		Error; err != nil {
+
+		return errors.Wrapf(err, "updating participant %d in issue %d", userID, issueID)
 	}
 
 	log.Debug("updated participant %d in issue %d (id %d)", userID, issueID, issueParticipantID)
@@ -41,10 +43,9 @@ func (accessor *DefaultAccessor) updateIssueParticipant(issueParticipantID int64
 
 // insertIssueParticipant creates a new issue participant
 func (accessor *DefaultAccessor) insertIssueParticipant(issueID int64, userID int64) error {
-	_, err := accessor.db.Exec(`
-		INSERT INTO issue_user(issue_id, uid, is_read, is_mentioned) VALUES ($1, $2, 1, 0)`,
-		issueID, userID)
-	if err != nil {
+	issueUser := IssueUser{IssueId: issueID, UserId: userID, IsRead: true, IsMentioned: false}
+
+	if err := accessor.db.Create(&issueUser).Error; err != nil {
 		err = errors.Wrapf(err, "adding participant %d in issue %d", userID, issueID)
 		return err
 	}

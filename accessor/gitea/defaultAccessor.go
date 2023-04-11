@@ -5,18 +5,19 @@
 package gitea
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/go-ini/ini"
 	"github.com/pkg/errors"
 	"github.com/stevejefferson/trac2gitea/log"
-
-	"github.com/go-ini/ini"
-	_ "github.com/mattn/go-sqlite3" // sqlite database driver
 	"gopkg.in/src-d/go-git.v4"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 // DefaultAccessor is the default implementation of the gitea Accessor interface, accessing Gitea directly via its database and filestore.
@@ -24,7 +25,8 @@ type DefaultAccessor struct {
 	rootDir       string
 	mainConfig    *ini.File
 	customConfig  *ini.File
-	db            *sql.Tx
+	db            *gorm.DB
+	dbType        string
 	userName      string
 	repoName      string
 	repoID        int64
@@ -113,6 +115,7 @@ func CreateDefaultAccessor(
 		mainConfig:    giteaMainConfig,
 		customConfig:  giteaCustomConfig,
 		db:            nil,
+		dbType:        "",
 		userName:      giteaUserName,
 		repoName:      giteaRepoName,
 		repoID:        0,
@@ -121,22 +124,30 @@ func CreateDefaultAccessor(
 		wikiRepoDir:   "",
 		wikiRepo:      nil,
 		overwrite:     overwriteData,
-		pushWiki:      pushWiki}
+		pushWiki:      pushWiki,
+	}
 
-	// open gitea DB - currently sqlite-specific...
-	giteaDbPath := giteaAccessor.GetStringConfig("database", "PATH")
-	giteaDb, err := sql.Open("sqlite3", giteaDbPath)
+	dialect, dbType, err := giteaAccessor.getDbDialect()
 	if err != nil {
-		err = errors.Wrapf(err, "opening sqlite database %s", giteaDbPath)
 		return nil, err
 	}
 
-	// start transaction
-	log.Info("using Gitea database %s", giteaDbPath)
-	giteaAccessor.db, err = giteaDb.Begin()
+	db, err := gorm.Open(dialect, &gorm.Config{
+		TranslateError: true,
+		QueryFields:    true,
+		Logger:         logger.Default.LogMode(logger.Info),
+	})
+
 	if err != nil {
-		err = errors.Wrapf(err, "creating database transaction")
+		err = errors.Wrap(err, "opening Gitea database")
 		return nil, err
+	}
+
+	// Start transaction
+	giteaAccessor.db = db.Begin()
+	giteaAccessor.dbType = dbType
+	if err = giteaAccessor.db.Error; err != nil {
+		err = errors.Wrap(err, "Unable to start Gitea database transaction")
 	}
 
 	giteaRepoID, err := giteaAccessor.getRepoID(giteaUserName, giteaRepoName)
@@ -188,4 +199,32 @@ func CreateDefaultAccessor(
 	giteaAccessor.wikiRepoURL = giteaWikiRepoURL
 
 	return &giteaAccessor, nil
+}
+
+func (accessor *DefaultAccessor) getDbDialect() (gorm.Dialector, string, error) {
+	var dialect gorm.Dialector
+
+	dbType := accessor.GetStringConfig("database", "DB_TYPE")
+	dbName := accessor.GetStringConfig("database", "NAME")
+	dbUser := accessor.GetStringConfig("database", "USER")
+	dbPassword := accessor.GetStringConfig("database", "PASSWD")
+	dbHost := accessor.GetStringConfig("database", "HOST")
+	dbCharset := accessor.GetStringConfig("database", "CHARSET")
+
+	switch dbType {
+	case "sqlite3":
+		giteaDbPath := accessor.GetStringConfig("database", "PATH")
+		dialect = sqlite.Open(giteaDbPath)
+	case "mysql":
+		if dbCharset == "utf8" {
+			dbCharset = "utf8mb4"
+		}
+		connstr := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=%s&parseTime=True&loc=Local",
+			dbUser, dbPassword, dbHost, dbName, dbCharset)
+		dialect = mysql.Open(connstr)
+	default:
+		return nil, "", errors.Errorf("Unknown Gitea database type, %s", dbType)
+	}
+
+	return dialect, dbType, nil
 }

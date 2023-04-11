@@ -14,52 +14,29 @@ import (
 
 // GetIssueCommentIDsByTime retrieves the IDs of all comments created at a given time for a given issue
 func (accessor *DefaultAccessor) GetIssueCommentIDsByTime(issueID int64, createdTime int64) ([]int64, error) {
-	rows, err := accessor.db.Query(
-		`SELECT id FROM comment WHERE issue_id = $1 AND created_unix = $2`, issueID, createdTime)
+	var commentIDs = []int64{}
+	err := accessor.db.Model(&IssueComment{}).
+		Select("id").
+		Where("issue_id=? AND created_unix=?", issueID, createdTime).
+		Find(&commentIDs).
+		Error
+
 	if err != nil {
 		err = errors.Wrapf(err, "retrieving ids of comments created at \"%s\" for issue %d", time.Unix(createdTime, 0), issueID)
 		return []int64{}, err
 	}
 
-	var issueCommentIDs = []int64{}
-	for rows.Next() {
-		var issueCommentID = NullID
-		if err := rows.Scan(&issueCommentID); err != nil {
-			err = errors.Wrapf(err, "retrieving id of comment created at \"%s\" for issue %d", time.Unix(createdTime, 0), issueID)
-			return []int64{}, err
-		}
-
-		issueCommentIDs = append(issueCommentIDs, issueCommentID)
-	}
-
-	return issueCommentIDs, nil
+	return commentIDs, nil
 }
 
 // updateIssueComment updates an existing issue comment
 func (accessor *DefaultAccessor) updateIssueComment(issueCommentID int64, issueID int64, comment *IssueComment) error {
-	_, err := accessor.db.Exec(`
-		UPDATE comment SET
-			type=?, issue_id=?, poster_id=?,
-			original_author_id=?, original_author=?, 
-			label_id=?,
-			old_milestone_id=?, milestone_id=?,
-			assignee_id=?, removed_assignee=?,
-			old_title=?, new_title=?,
-			content=?,
-			created_unix=?, updated_unix=?
-			WHERE id=?`,
-		comment.CommentType, issueID, comment.AuthorID,
-		comment.OriginalAuthorID, comment.OriginalAuthorName,
-		comment.LabelID,
-		comment.OldMilestoneID, comment.MilestoneID,
-		comment.AssigneeID, comment.RemovedAssigneeID,
-		comment.OldTitle, comment.Title,
-		comment.Text,
-		comment.Time, comment.Time,
-		issueCommentID)
-	if err != nil {
-		err = errors.Wrapf(err, "updating comment on issue %d timed at %s", issueID, time.Unix(comment.Time, 0))
-		return err
+	comment.ID = issueCommentID
+	comment.IssueID = issueID
+	comment.CreatedTime = comment.Time
+
+	if err := accessor.db.Save(&comment).Error; err != nil {
+		return errors.Wrapf(err, "updating comment on issue %d timed at %s", issueID, time.Unix(comment.Time, 0))
 	}
 
 	log.Debug("updated issue comment at %s for issue %d (id %d)", time.Unix(comment.Time, 0), issueID, issueCommentID)
@@ -69,40 +46,17 @@ func (accessor *DefaultAccessor) updateIssueComment(issueCommentID int64, issueI
 
 // insertIssueComment adds a new comment to a Gitea issue, returns id of created comment.
 func (accessor *DefaultAccessor) insertIssueComment(issueID int64, comment *IssueComment) (int64, error) {
-	_, err := accessor.db.Exec(`
-		INSERT INTO comment(
-			type, issue_id, poster_id, 
-			original_author_id, original_author, 
-			label_id,
-			old_milestone_id, milestone_id,
-			assignee_id, removed_assignee,
-			old_title, new_title,
-			content, 
-			created_unix, updated_unix)
-			VALUES ( $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15 )`,
-		comment.CommentType, issueID, comment.AuthorID,
-		comment.OriginalAuthorID, comment.OriginalAuthorName,
-		comment.LabelID,
-		comment.OldMilestoneID, comment.MilestoneID,
-		comment.AssigneeID, comment.RemovedAssigneeID,
-		comment.OldTitle, comment.Title,
-		comment.Text,
-		comment.Time, comment.Time)
-	if err != nil {
+	comment.IssueID = issueID
+	comment.CreatedTime = comment.Time
+
+	if err := accessor.db.Create(&comment).Error; err != nil {
 		err = errors.Wrapf(err, "adding comment \"%s\" for issue %d", comment.Text, issueID)
 		return NullID, err
 	}
 
-	var issueCommentID int64
-	err = accessor.db.QueryRow(`SELECT last_insert_rowid()`).Scan(&issueCommentID)
-	if err != nil {
-		err = errors.Wrapf(err, "retrieving id of new comment \"%s\" for issue %d", comment.Text, issueID)
-		return NullID, err
-	}
+	log.Debug("added issue comment at %s for issue %d (id %d)", time.Unix(comment.Time, 0), issueID, comment.ID)
 
-	log.Debug("added issue comment at %s for issue %d (id %d)", time.Unix(comment.Time, 0), issueID, issueCommentID)
-
-	return issueCommentID, nil
+	return comment.ID, nil
 }
 
 var prevIssueID = NullID

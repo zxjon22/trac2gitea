@@ -4,27 +4,112 @@
 
 package gitea
 
+// Model for a Gitea repository
+type Repository struct {
+	ID        int64
+	OwnerID   int64
+	OwnerName string
+	Name      string
+}
+
+func (Repository) TableName() string {
+	return "repository"
+}
+
+// Model for a Gitea user
+type User struct {
+	ID        int64
+	LowerName string
+	Name      string
+	Email     string
+}
+
+func (User) TableName() string {
+	return "user"
+}
+
 // Issue describes a Gitea issue.
 type Issue struct {
+	ID                 int64
+	RepoID             int64
 	Index              int64
-	Summary            string
-	ReporterID         int64
-	Milestone          string
+	Summary            string `gorm:"column:name"`
+	ReporterID         int64  `gorm:"column:poster_id"`
+	Priority           int
+	MilestoneID        int64
+	Milestone          string `gorm:"-"`
 	OriginalAuthorID   int64
-	OriginalAuthorName string
-	Closed             bool
-	Description        string
-	Created            int64
-	Updated            int64
+	OriginalAuthorName string `gorm:"column:original_author"`
+	Closed             bool   `gorm:"column:is_closed"`
+	IsPull             bool
+	Description        string `gorm:"column:content"`
+	NumComments        int64
+	Ref                string
+	Deadline           int64 `gorm:"column:deadline_unix"`
+	Created            int64 `gorm:"column:created_unix"`
+	Updated            int64 `gorm:"column:updated_unix"`
+	ClosedTime         int64 `gorm:"column:closed_unix"`
+}
+
+func (Issue) TableName() string {
+	return "issue"
+}
+
+type IssueIndex struct {
+	RepoID   int64 `gorm:"primaryKey;column:group_id"`
+	MaxIndex int64
+}
+
+func (IssueIndex) TableName() string {
+	return "issue_index"
+}
+
+// Models Gitea users assigned to issues
+type IssueAssignee struct {
+	ID         int64
+	AssigneeId int64
+	IssueID    int64
+}
+
+// Gitea users participating on an issue
+type IssueUser struct {
+	ID          int64
+	UserId      int64 `gorm:"column:uid"`
+	IssueId     int64
+	IsRead      bool
+	IsMentioned bool
+}
+
+func (IssueUser) TableName() string {
+	return "issue_user"
+}
+
+// Gitea label assigned to an issue
+type IssueLabel struct {
+	ID      int64
+	IssueID int64
+	LabelID int64
+}
+
+func (IssueLabel) TableName() string {
+	return "issue_label"
 }
 
 // IssueAttachment describes an attachment to a Gitea issue.
+
 type IssueAttachment struct {
-	UUID      string
-	CommentID int64
-	FileName  string
-	Time      int64
-	Size      int64
+	ID            int64
+	UUID          string
+	IssueID       int64
+	CommentID     int64
+	FileName      string `gorm:"column:name"`
+	DownloadCount int64
+	Time          int64 `gorm:"column:created_unix"`
+	Size          int64
+}
+
+func (IssueAttachment) TableName() string {
+	return "attachment"
 }
 
 // IssueCommentType defines the types of issue comment we support
@@ -55,35 +140,56 @@ const (
 
 // IssueComment describes a comment on a Gitea issue.
 type IssueComment struct {
-	CommentType        IssueCommentType
-	AuthorID           int64
+	ID                 int64
+	CommentType        IssueCommentType `gorm:"column:type"`
+	AuthorID           int64            `gorm:"column:poster_id"`
 	OriginalAuthorID   int64
-	OriginalAuthorName string
+	OriginalAuthorName string `gorm:"column:original_author"`
+	IssueID            int64
 	LabelID            int64
 	OldMilestoneID     int64
 	MilestoneID        int64
 	AssigneeID         int64
-	RemovedAssigneeID  int64
+	RemovedAssigneeID  int64 `gorm:"column:removed_assignee"`
 	OldTitle           string
-	Title              string
-	Text               string
-	Time               int64
+	Title              string `gorm:"column:new_title"`
+	Text               string `gorm:"column:content"`
+	CreatedTime        int64  `gorm:"column:created_unix"`
+	Time               int64  `gorm:"column:updated_unix"`
+}
+
+func (IssueComment) TableName() string {
+	return "comment"
 }
 
 // Label describes a Gitea label
 type Label struct {
+	ID          int64
+	RepoId      int64
 	Name        string
 	Description string
 	Color       string
 }
 
+func (Label) TableName() string {
+	return "label"
+}
+
 // Milestone describes a Gitea milestone.
 type Milestone struct {
-	Name        string
-	Description string
-	Closed      bool
-	DueTime     int64
-	ClosedTime  int64
+	ID              int64
+	RepoId          int64
+	Name            string
+	NumIssues       int64
+	NumClosedIssues int64
+	Description     string `gorm:"column:content"`
+	Closed          bool   `gorm:"column:is_closed"`
+	DueTime         int64  `gorm:"column:deadline_unix"`
+	ClosedTime      int64  `gorm:"column:closed_date_unix"`
+}
+
+func (Milestone) TableName() string {
+	return "milestone"
 }
 
 // NullID id for unset references in Gitea, also used for lookup failures

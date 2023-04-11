@@ -6,7 +6,7 @@ package gitea
 
 // CommitTransaction commits a Gitea transaction.
 func (accessor *DefaultAccessor) CommitTransaction() error {
-	err := accessor.db.Commit()
+	err := accessor.db.Commit().Error
 	if err != nil {
 		return err
 	}
@@ -16,7 +16,7 @@ func (accessor *DefaultAccessor) CommitTransaction() error {
 
 // RollbackTransaction rolls back a Gitea transaction.
 func (accessor *DefaultAccessor) RollbackTransaction() error {
-	err := accessor.db.Rollback()
+	err := accessor.db.Rollback().Error
 	if err != nil {
 		return err
 	}

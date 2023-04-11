@@ -5,28 +5,30 @@
 package gitea
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
 	"github.com/stevejefferson/trac2gitea/log"
+	"gorm.io/gorm"
 )
 
 // getIssueAttachmentIDandUUID retrieves the id and UUID of the given issue attachment, returns id of gitea.NullID if no such attachment
 func (accessor *DefaultAccessor) getIssueAttachmentIDandUUID(issueID int64, fileName string) (int64, string, error) {
-	var issueAttachmentID = NullID
-	var issueAttachmentUUID string
-	err := accessor.db.QueryRow(`
-		SELECT id, uuid FROM attachment WHERE issue_id = $1 AND name = $2
-		`, issueID, fileName).Scan(&issueAttachmentID, &issueAttachmentUUID)
-	if err != nil && err != sql.ErrNoRows {
+	issueAttachment := IssueAttachment{ID: NullID}
+
+	err := accessor.db.
+		Where("issue_id=? AND name=?", issueID, fileName).
+		First(&issueAttachment).
+		Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving id for attachment %s for issue %d", fileName, issueID)
 		return NullID, "", err
 	}
 
-	return issueAttachmentID, issueAttachmentUUID, nil
+	return issueAttachment.ID, issueAttachment.UUID, nil
 }
 
 // GetIssueAttachmentUUID returns the UUID for a named attachment of a given issue - returns empty string if cannot find issue/attachment.
@@ -84,13 +86,11 @@ func (accessor *DefaultAccessor) deleteAttachment(UUID string) error {
 
 // updateIssueAttachment updates an existing issue attachment
 func (accessor *DefaultAccessor) updateIssueAttachment(issueAttachmentID int64, issueID int64, attachment *IssueAttachment, filePath string) error {
-	_, err := accessor.db.Exec(`
-		UPDATE attachment SET uuid=?, issue_id=?, comment_id=?, name=?, created_unix=?, size=? WHERE id=?`,
-		attachment.UUID, issueID, attachment.CommentID, attachment.FileName, attachment.Time, attachment.Size, issueAttachmentID)
+	attachment.ID = issueAttachmentID
+	attachment.IssueID = issueID
 
-	if err != nil {
-		err = errors.Wrapf(err, "updating attachment %s for issue %d", attachment.FileName, issueID)
-		return err
+	if err := accessor.db.Save(&attachment).Error; err != nil {
+		return errors.Wrapf(err, "updating attachment %s for issue %d", attachment.FileName, issueID)
 	}
 
 	log.Debug("updated attachment %s for issue %d (id %d)", attachment.UUID, issueID, issueAttachmentID)
@@ -100,25 +100,16 @@ func (accessor *DefaultAccessor) updateIssueAttachment(issueAttachmentID int64, 
 
 // insertIssueAttachment creates a new attachment to a Gitea issue, returns id of created attachment
 func (accessor *DefaultAccessor) insertIssueAttachment(issueID int64, attachment *IssueAttachment, filePath string) (int64, error) {
-	_, err := accessor.db.Exec(`
-		INSERT INTO attachment(
-			uuid, issue_id, comment_id, name, created_unix, size)
-			VALUES ($1, $2, $3, $4, $5, $6)`, attachment.UUID, issueID, attachment.CommentID, attachment.FileName, attachment.Time, attachment.Size)
-	if err != nil {
-		err = errors.Wrapf(err, "adding attachment %s for issue %d", attachment.FileName, issueID)
-		return NullID, err
-	}
+	attachment.IssueID = issueID
 
-	var issueAttachmentID int64
-	err = accessor.db.QueryRow(`SELECT last_insert_rowid()`).Scan(&issueAttachmentID)
-	if err != nil {
-		err = errors.Wrapf(err, "retrieving id of new attachment %s for issue %d", attachment.FileName, issueID)
+	if err := accessor.db.Create(&attachment).Error; err != nil {
+		err = errors.Wrapf(err, "adding attachment %s for issue %d", attachment.FileName, issueID)
 		return NullID, err
 	}
 
 	log.Debug("added attachment %s for issue %d", attachment.FileName, issueID)
 
-	return issueAttachmentID, nil
+	return attachment.ID, nil
 }
 
 // AddIssueAttachment adds a new attachment to an issue using the provided file - returns id of created attachment

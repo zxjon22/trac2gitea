@@ -5,17 +5,21 @@
 package gitea
 
 import (
-	"database/sql"
 	"fmt"
 
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 func (accessor *DefaultAccessor) getRepoID(userName string, repoName string) (int64, error) {
 	var id int64 = NullID
-	err := accessor.db.QueryRow(`SELECT r.id FROM repository r, user u WHERE r.owner_id =
-			u.id AND u.name = $1 AND r.name = $2`, userName, repoName).Scan(&id)
-	if err != nil && err != sql.ErrNoRows {
+
+	err := accessor.db.Model(&Repository{}).
+		Where("owner_name=? AND name=?", userName, repoName).
+		Limit(1).
+		Pluck("id", &id).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving id of repository %s for user %s", repoName, userName)
 		return NullID, err
 	}
@@ -25,13 +29,25 @@ func (accessor *DefaultAccessor) getRepoID(userName string, repoName string) (in
 
 // UpdateRepoIssueCounts updates issue counts for our chosen Gitea repository.
 func (accessor *DefaultAccessor) UpdateRepoIssueCounts() error {
-	_, err := accessor.db.Exec(`
-		UPDATE repository SET 
-			num_issues = (SELECT COUNT(id) FROM issue),
-			num_closed_issues = (SELECT COUNT(id) FROM issue WHERE is_closed=1)
-			WHERE id = $1`, accessor.repoID)
+	// TODO: All these bulk updates are wrong? Don't filter by repo_id in the subselect?
+	err := accessor.db.Model(&Repository{}).
+		Where("id=?", accessor.repoID).
+		Update("num_issues", accessor.db.Model(&Issue{}).
+			Where("repo_id=?", accessor.repoID).
+			Select("count(id)")).
+		Error
+
+	if err == nil {
+		err = accessor.db.Model(&Repository{}).
+			Where("id=?", accessor.repoID).
+			Update("num_closed_issues", accessor.db.Model(&Issue{}).
+				Select("count(id)").
+				Where("is_closed=? AND repo_id=?", 1, accessor.repoID)).
+			Error
+	}
+
 	if err != nil {
-		err = errors.Wrapf(err, "updating number of issues for repository %d", accessor.repoID)
+		err = errors.Wrapf(err, "updating number of milestones for repository %d", accessor.repoID)
 		return err
 	}
 
@@ -40,11 +56,22 @@ func (accessor *DefaultAccessor) UpdateRepoIssueCounts() error {
 
 // UpdateRepoMilestoneCounts updates milestone counts for our chosen Gitea repository.
 func (accessor *DefaultAccessor) UpdateRepoMilestoneCounts() error {
-	_, err := accessor.db.Exec(`
-		UPDATE repository SET 
-			num_milestones = (SELECT COUNT(id) FROM milestone),
-			num_closed_milestones = (SELECT COUNT(id) FROM milestone WHERE is_closed=1)
-			WHERE id = $1`, accessor.repoID)
+	err := accessor.db.Model(&Repository{}).
+		Where("id=?", accessor.repoID).
+		Update("num_milestones", accessor.db.Model(&Milestone{}).
+			Where("repo_id=?", accessor.repoID).
+			Select("count(id)")).
+		Error
+
+	if err == nil {
+		err = accessor.db.Model(&Repository{}).
+			Where("id=?", accessor.repoID).
+			Update("num_closed_milestones", accessor.db.Model(&Milestone{}).
+				Select("count(id)").
+				Where("is_closed=? AND repo_id=?", 1, accessor.repoID)).
+			Error
+	}
+
 	if err != nil {
 		err = errors.Wrapf(err, "updating number of milestones for repository %d", accessor.repoID)
 		return err

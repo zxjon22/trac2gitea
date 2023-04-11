@@ -5,33 +5,36 @@
 package gitea
 
 import (
-	"database/sql"
 	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/stevejefferson/trac2gitea/log"
+	"gorm.io/gorm"
 )
 
 // GetMilestoneID gets the ID of a named milestone - returns NullID if no such milestone
 func (accessor *DefaultAccessor) GetMilestoneID(milestoneName string) (int64, error) {
-	var milestoneID int64 = NullID
-	err := accessor.db.QueryRow(`SELECT id FROM milestone WHERE name = $1 AND repo_id = $2`, milestoneName, accessor.repoID).Scan(&milestoneID)
-	if err != nil && err != sql.ErrNoRows {
+	var id int64 = NullID
+	err := accessor.db.Model(&Milestone{}).
+		Where("repo_id=? AND name=?", accessor.repoID, milestoneName).
+		Limit(1).
+		Pluck("id", &id).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving id of milestone %s", milestoneName)
 		return NullID, err
 	}
 
-	return milestoneID, nil
+	return id, nil
 }
 
 // updateMilestone updates an existing milestone
 func (accessor *DefaultAccessor) updateMilestone(milestoneID int64, milestone *Milestone) error {
-	_, err := accessor.db.Exec(`
-		UPDATE milestone SET repo_id=?, name=?, content=?, is_closed=?, deadline_unix=?, closed_date_unix=? WHERE id=?`,
-		accessor.repoID, milestone.Name, milestone.Description, milestone.Closed, milestone.DueTime, milestone.ClosedTime, milestoneID)
-	if err != nil {
-		err = errors.Wrapf(err, "updating milestone %s", milestone.Name)
-		return err
+	milestone.RepoId = accessor.repoID
+	milestone.ID = milestoneID
+
+	if err := accessor.db.Save(&milestone).Error; err != nil {
+		return errors.Wrapf(err, "updating milestone %s", milestone.Name)
 	}
 
 	log.Debug("updated milestone %s (id %d)", milestone.Name, milestoneID)
@@ -41,24 +44,16 @@ func (accessor *DefaultAccessor) updateMilestone(milestoneID int64, milestone *M
 
 // insertMilestone inserts a new milestone, returns milstone id.
 func (accessor *DefaultAccessor) insertMilestone(milestone *Milestone) (int64, error) {
-	_, err := accessor.db.Exec(`
-		INSERT INTO	milestone(repo_id, name, content, is_closed, deadline_unix, closed_date_unix) VALUES($1, $2, $3, $4, $5, $6)`,
-		accessor.repoID, milestone.Name, milestone.Description, milestone.Closed, milestone.DueTime, milestone.ClosedTime)
-	if err != nil {
+	milestone.RepoId = accessor.repoID
+
+	if err := accessor.db.Create(&milestone).Error; err != nil {
 		err = errors.Wrapf(err, "adding milestone %s", milestone.Name)
 		return NullID, err
 	}
 
-	var milestoneID int64
-	err = accessor.db.QueryRow(`SELECT last_insert_rowid()`).Scan(&milestoneID)
-	if err != nil {
-		err = errors.Wrapf(err, "retrieving id of new milestone %s", milestone.Name)
-		return NullID, err
-	}
+	log.Debug("added milestone %s (id %d)", milestone.Name, milestone.ID)
 
-	log.Debug("added milestone %s (id %d)", milestone.Name, milestoneID)
-
-	return milestoneID, nil
+	return milestone.ID, nil
 }
 
 // AddMilestone adds a milestone to Gitea, returns id of created milestone
