@@ -182,10 +182,13 @@ type Milestone struct {
 	Name            string
 	NumIssues       int64
 	NumClosedIssues int64
+	Completeness    int
 	Description     string `gorm:"column:content"`
 	Closed          bool   `gorm:"column:is_closed"`
 	DueTime         int64  `gorm:"column:deadline_unix"`
 	ClosedTime      int64  `gorm:"column:closed_date_unix"`
+	Created         int64  `gorm:"<-:create;autoCreateTime;column:created_unix"`
+	Updated         int64  `gorm:"autoUpdateTime;column:updated_unix"`
 }
 
 func (Milestone) TableName() string {

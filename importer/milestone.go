@@ -23,7 +23,13 @@ func (importer *Importer) ImportMilestones() error {
 			Description: tracMilestone.Description,
 			Closed:      tracMilestone.Completed != 0,
 			DueTime:     tracMilestone.Due,
-			ClosedTime:  tracMilestone.Completed}
+			ClosedTime:  tracMilestone.Completed,
+			Created:     tracMilestone.Completed,
+		}
+
+		if tracMilestone.Due == 0 {
+			giteaMilestone.DueTime = 253402300799 // 31st Dec 9999
+		}
 
 		milestoneID, err := importer.giteaAccessor.AddMilestone(&giteaMilestone)
 		if err != nil {
