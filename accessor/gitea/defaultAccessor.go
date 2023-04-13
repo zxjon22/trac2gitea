@@ -138,7 +138,7 @@ func CreateDefaultAccessor(
 	db, err := gorm.Open(dialect, &gorm.Config{
 		TranslateError: true,
 		QueryFields:    true,
-		Logger:         logger.Default.LogMode(logger.Info),
+		Logger:         logger.Default.LogMode(getGormLogLevel()),
 	})
 
 	if err != nil {
@@ -202,6 +202,16 @@ func CreateDefaultAccessor(
 	giteaAccessor.wikiRepoURL = giteaWikiRepoURL
 
 	return &giteaAccessor, nil
+}
+
+// Map log output to gorm log levels. Change to logger.Info to see SQL
+func getGormLogLevel() logger.LogLevel {
+	lvl := log.GetLevel()
+	if lvl == log.TRACE {
+		return logger.Warn
+	} else {
+		return logger.Error
+	}
 }
 
 func (accessor *DefaultAccessor) getDbDialect() (gorm.Dialector, string, error) {
