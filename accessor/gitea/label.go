@@ -5,34 +5,34 @@
 package gitea
 
 import (
-	"database/sql"
-
-	"github.com/stevejefferson/trac2gitea/log"
-
 	"github.com/pkg/errors"
+	"github.com/stevejefferson/trac2gitea/log"
+	"gorm.io/gorm"
 )
 
 // GetLabelID retrieves the id of the given label, returns NullID if no such label
 func (accessor *DefaultAccessor) GetLabelID(labelName string) (int64, error) {
-	var labelID int64 = NullID
-	err := accessor.db.QueryRow(`
-		SELECT id FROM label WHERE repo_id = $1 AND name = $2
-		`, accessor.repoID, labelName).Scan(&labelID)
-	if err != nil && err != sql.ErrNoRows {
+	var id int64 = NullID
+	err := accessor.db.Model(&Label{}).
+		Where("repo_id=? AND name=?", accessor.repoID, labelName).
+		Limit(1).
+		Pluck("id", &id).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving id of label %s", labelName)
 		return NullID, err
 	}
 
-	return labelID, nil
+	return id, nil
 }
 
 // updateLabel updates an existing label
 func (accessor *DefaultAccessor) updateLabel(labelID int64, label *Label) error {
-	_, err := accessor.db.Exec(`UPDATE label SET repo_id=?, name=?, description=?, color=? WHERE id=?`,
-		accessor.repoID, label.Name, label.Description, label.Color, labelID)
-	if err != nil {
-		err = errors.Wrapf(err, "updating label %s", label.Name)
-		return err
+	label.ID = labelID
+	label.RepoId = accessor.repoID
+
+	if err := accessor.db.Save(&label).Error; err != nil {
+		return errors.Wrapf(err, "updating label %s", label.Name)
 	}
 
 	log.Debug("updated label %s, color %s (id %d)", label.Name, label.Color, labelID)
@@ -42,24 +42,16 @@ func (accessor *DefaultAccessor) updateLabel(labelID int64, label *Label) error 
 
 // insertLabel inserts a new label, returns label id.
 func (accessor *DefaultAccessor) insertLabel(label *Label) (int64, error) {
-	_, err := accessor.db.Exec(`
-		INSERT INTO label(repo_id, name, description, color) VALUES($1, $2, $3, $4)`,
-		accessor.repoID, label.Name, label.Description, label.Color)
-	if err != nil {
+	label.RepoId = accessor.repoID
+
+	if err := accessor.db.Create(&label).Error; err != nil {
 		err = errors.Wrapf(err, "adding label %s", label.Name)
 		return NullID, err
 	}
 
-	var labelID int64
-	err = accessor.db.QueryRow(`SELECT last_insert_rowid()`).Scan(&labelID)
-	if err != nil {
-		err = errors.Wrapf(err, "retrieving id of new label %s", label.Name)
-		return NullID, err
-	}
+	log.Debug("added label %s, color %s (id %d)", label.Name, label.Color, label.ID)
 
-	log.Debug("added label %s, color %s (id %d)", label.Name, label.Color, labelID)
-
-	return labelID, nil
+	return label.ID, nil
 }
 
 // AddLabel adds a label to Gitea, returns label id.

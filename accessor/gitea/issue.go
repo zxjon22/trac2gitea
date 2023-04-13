@@ -5,54 +5,42 @@
 package gitea
 
 import (
-	"database/sql"
 	"fmt"
 
 	"github.com/pkg/errors"
 	"github.com/stevejefferson/trac2gitea/log"
+	"gorm.io/gorm"
 )
 
 // GetIssueID retrieves the id of the Gitea issue corresponding to a given issue index - returns NullID if no such issue.
 func (accessor *DefaultAccessor) GetIssueID(issueIndex int64) (int64, error) {
-	var issueID int64 = NullID
-	err := accessor.db.QueryRow(`
-		SELECT id FROM issue WHERE repo_id = $1 AND "index" = $2
-		`, accessor.repoID, issueIndex).Scan(&issueID)
-	if err != nil && err != sql.ErrNoRows {
+	var id int64 = NullID
+	err := accessor.db.Model(&Issue{}).
+		Where("repo_id=? AND `index`=?", accessor.repoID, issueIndex).
+		Limit(1).
+		Pluck("id", &id).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving issue with index %d", issueIndex)
 		return NullID, err
 	}
 
-	return issueID, nil
-}
-
-func toNullInt64(value int64) sql.NullInt64 {
-	var nullValue sql.NullInt64
-	nullValue.Valid = (value != NullID)
-	nullValue.Int64 = value
-	return nullValue
+	return id, nil
 }
 
 // updateIssue updates an existing issue in Gitea
 func (accessor *DefaultAccessor) updateIssue(issueID int64, issue *Issue) error {
-	nullOwnerID := toNullInt64(issue.OriginalAuthorID)
 	milestoneID, err := accessor.GetMilestoneID(issue.Milestone)
 	if err != nil {
 		return err
 	}
 
-	_, err = accessor.db.Exec(`
-		UPDATE issue SET "index"=?, repo_id=?, name=?, poster_id=?,
-			milestone_id=?, original_author_id=?, original_author=?, 
-			is_pull=0, is_closed=?, content=?, created_unix=?, updated_unix=?
-			WHERE id=?`,
-		issue.Index, accessor.repoID, issue.Summary, issue.ReporterID,
-		milestoneID, nullOwnerID, issue.OriginalAuthorName,
-		issue.Closed, issue.Description, issue.Created, issue.Updated,
-		issueID)
-	if err != nil {
-		err = errors.Wrapf(err, "updating issue with index %d", issue.Index)
-		return err
+	issue.ID = issueID
+	issue.RepoID = accessor.repoID
+	issue.MilestoneID = milestoneID
+
+	if err := accessor.db.Save(&issue).Error; err != nil {
+		return errors.Wrapf(err, "updating issue with index %d", issue.Index)
 	}
 
 	log.Info("updated issue %d: %s", issue.Index, issue.Summary)
@@ -62,31 +50,22 @@ func (accessor *DefaultAccessor) updateIssue(issueID int64, issue *Issue) error 
 
 // insertIssue adds a new issue to Gitea, returns id of added issue.
 func (accessor *DefaultAccessor) insertIssue(issue *Issue) (int64, error) {
-	nullOwnerID := toNullInt64(issue.OriginalAuthorID)
 	milestoneID, err := accessor.GetMilestoneID(issue.Milestone)
 	if err != nil {
 		return NullID, err
 	}
 
-	_, err = accessor.db.Exec(`
-		INSERT INTO issue("index", repo_id, name, poster_id, milestone_id, original_author_id, original_author, is_pull, is_closed, content, created_unix, updated_unix, closed_unix)
-			SELECT $1, $2, $3, $4, $5, $6, $7, 0, $8, $9, $10, $11, $12`,
-		issue.Index, accessor.repoID, issue.Summary, issue.ReporterID, milestoneID, nullOwnerID, issue.OriginalAuthorName, issue.Closed, issue.Description, issue.Created, issue.Updated, 0)
-	if err != nil {
-		err = errors.Wrapf(err, "adding issue with index %d", issue.Index)
-		return NullID, err
-	}
+	issue.RepoID = accessor.repoID
+	issue.MilestoneID = milestoneID
 
-	var issueID int64
-	err = accessor.db.QueryRow(`SELECT last_insert_rowid()`).Scan(&issueID)
-	if err != nil {
-		err = errors.Wrapf(err, "retrieving id of new issue with index %d", issue.Index)
+	if err := accessor.db.Create(&issue).Error; err != nil {
+		err = errors.Wrapf(err, "adding issue with index %d", issue.Index)
 		return NullID, err
 	}
 
 	log.Info("created issue %d: %s", issue.Index, issue.Summary)
 
-	return issueID, nil
+	return issue.ID, nil
 }
 
 // AddIssue adds a new issue to Gitea.
@@ -114,10 +93,12 @@ func (accessor *DefaultAccessor) AddIssue(issue *Issue) (int64, error) {
 
 // SetIssueClosedTime sets the date/time a given Gitea issue was closed.
 func (accessor *DefaultAccessor) SetIssueClosedTime(issueID int64, updateTime int64) error {
-	_, err := accessor.db.Exec(`UPDATE issue SET closed_unix = MAX(closed_unix,$1) WHERE id = $2`, updateTime, issueID)
-	if err != nil {
-		err = errors.Wrapf(err, "setting closed time for issue %d", issueID)
-		return err
+	if err := accessor.db.Model(&Issue{}).
+		Where("id=?", issueID).
+		Update("closed_unix", accessor.Greatest("closed_unix,?", updateTime)).
+		Error; err != nil {
+
+		return errors.Wrapf(err, "setting closed time for issue %d", issueID)
 	}
 
 	return nil
@@ -125,10 +106,12 @@ func (accessor *DefaultAccessor) SetIssueClosedTime(issueID int64, updateTime in
 
 // SetIssueUpdateTime sets the update time on a given Gitea issue.
 func (accessor *DefaultAccessor) SetIssueUpdateTime(issueID int64, updateTime int64) error {
-	_, err := accessor.db.Exec(`UPDATE issue SET updated_unix = MAX(updated_unix,$1) WHERE id = $2`, updateTime, issueID)
-	if err != nil {
-		err = errors.Wrapf(err, "setting updated time for issue %d", issueID)
-		return err
+	if err := accessor.db.Model(&Issue{}).
+		Where("id=?", issueID).
+		Update("updated_unix", accessor.Greatest("updated_unix,?", updateTime)).
+		Error; err != nil {
+
+		return errors.Wrapf(err, "setting updated time for issue %d", issueID)
 	}
 
 	return nil
@@ -142,13 +125,15 @@ func (accessor *DefaultAccessor) GetIssueURL(issueID int64) string {
 
 // UpdateIssueCommentCount updates the count of comments a given issue
 func (accessor *DefaultAccessor) UpdateIssueCommentCount(issueID int64) error {
-	_, err := accessor.db.Exec(`
-	UPDATE issue SET 
-		num_comments = (SELECT COUNT(id) FROM comment)
-		WHERE id = $1`, issueID)
-	if err != nil {
-		err = errors.Wrapf(err, "updating number of comments for issue %d", issueID)
-		return err
+	if err := accessor.db.Model(&Issue{}).
+		Where("id=?", issueID).
+		Update("num_comments", accessor.
+			db.Model(&IssueComment{}).
+			Where("issue_id=?", issueID).
+			Select("count(id)")).
+		Error; err != nil {
+
+		return errors.Wrapf(err, "updating number of comments for issue %d", issueID)
 	}
 
 	return nil
@@ -156,15 +141,16 @@ func (accessor *DefaultAccessor) UpdateIssueCommentCount(issueID int64) error {
 
 // UpdateIssueIndex updates the issue_index table after adding a new issue
 func (accessor *DefaultAccessor) UpdateIssueIndex(issueID, ticketID int64) error {
-	err := accessor.db.QueryRow(`SELECT group_id FROM issue_index WHERE group_id = $1`, accessor.repoID).Scan()
-	if err == sql.ErrNoRows {
-		_, err = accessor.db.Exec(`
-		INSERT INTO issue_index (group_id, max_index) VALUES ($1, $2)
-		`, accessor.repoID, ticketID)
-	} else {
-		_, err = accessor.db.Exec(`
-		UPDATE issue_index SET max_index = MAX(max_index, $1) WHERE group_id = $2
-		`, ticketID, accessor.repoID)
+	var issueIndex IssueIndex
+
+	// FIXME: Why is issueID passed in at all?
+	err := accessor.db.First(&issueIndex, accessor.repoID).Error
+	if err != nil && err == gorm.ErrRecordNotFound {
+		err = accessor.db.Create(&IssueIndex{RepoID: accessor.repoID, MaxIndex: ticketID}).Error
+	} else if err == nil {
+		err = accessor.db.Model(&issueIndex).
+			Update("max_index", accessor.Greatest("max_index,?", ticketID)).
+			Error
 	}
 
 	return err

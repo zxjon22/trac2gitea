@@ -5,11 +5,11 @@
 package gitea
 
 import (
-	"database/sql"
 	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 // GetUserID retrieves the id of a named Gitea user - returns NullID if no such user.
@@ -19,8 +19,12 @@ func (accessor *DefaultAccessor) GetUserID(userName string) (int64, error) {
 	}
 
 	var id int64 = NullID
-	err := accessor.db.QueryRow(`SELECT id FROM user WHERE lower_name = $1 or email = $1`, userName).Scan(&id)
-	if err != nil && err != sql.ErrNoRows {
+	err := accessor.db.Model(&User{}).
+		Where("lower_name=@name OR email=@name", map[string]interface{}{"name": userName}).
+		Limit(1).
+		Pluck("id", &id).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving id of user %s", userName)
 		return NullID, err
 	}
@@ -30,9 +34,14 @@ func (accessor *DefaultAccessor) GetUserID(userName string) (int64, error) {
 
 // GetUserEMailAddress retrieves the email address of a given user
 func (accessor *DefaultAccessor) GetUserEMailAddress(userName string) (string, error) {
-	var emailAddress string = ""
-	err := accessor.db.QueryRow(`SELECT email FROM user WHERE lower_name = $1`, userName).Scan(&emailAddress)
-	if err != nil && err != sql.ErrNoRows {
+	var emailAddress string
+
+	err := accessor.db.Model(&User{}).
+		Where("lower_name=?", userName).
+		Limit(1).
+		Pluck("email", &emailAddress).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "retrieving email address of user %s", userName)
 		return "", err
 	}
@@ -48,14 +57,16 @@ func (accessor *DefaultAccessor) getUserRepoURL() string {
 
 // MatchUser retrieves the name of the user best matching a user name or email address
 func (accessor *DefaultAccessor) MatchUser(userName string, userEmail string) (string, error) {
-	var matchedUserName = ""
-	lcUserName := strings.ToLower(userName)
-	err := accessor.db.QueryRow(`
-		SELECT lower_name FROM user 
-		WHERE lower_name = $1 
-		OR full_name = $2 
-		OR email = $3`, lcUserName, userName, userEmail).Scan(&matchedUserName)
-	if err != nil && err != sql.ErrNoRows {
+	var matchedUserName string
+
+	err := accessor.db.Model(&User{}).
+		Where("lower_name=?", strings.ToLower(userName)).
+		Or("full_name=?", userName).
+		Or("email=?", userEmail).
+		Limit(1).
+		Pluck("lower_name", &matchedUserName).Error
+
+	if err != nil && err != gorm.ErrRecordNotFound {
 		err = errors.Wrapf(err, "trying to match user name %s, email %s", userName, userEmail)
 		return "", err
 	}

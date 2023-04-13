@@ -4,14 +4,12 @@
 
 package gitea
 
-import (
-	"github.com/pkg/errors"
-)
+import "github.com/pkg/errors"
 
 // UpdateMilestoneIssueCounts updates issue counts for all milestones.
 func (accessor *DefaultAccessor) UpdateMilestoneIssueCounts() error {
-	_, err := accessor.db.Exec(`
-		UPDATE milestone AS m SET 
+	err := accessor.db.Exec(`
+		UPDATE milestone AS m SET
 			num_issues = (
 				SELECT COUNT(i1.id)
 				FROM issue i1
@@ -22,7 +20,17 @@ func (accessor *DefaultAccessor) UpdateMilestoneIssueCounts() error {
 				FROM issue i2
 				WHERE m.id = i2.milestone_id
 				AND i2.is_closed = 1
-				GROUP BY i2.milestone_id)`)
+				GROUP BY i2.milestone_id)
+		WHERE m.repo_id=?`, accessor.repoID).Error
+
+	if err == nil {
+		err = accessor.db.Exec(`
+		UPDATE milestone SET
+		num_issues = COALESCE(num_issues,0),
+		num_closed_issues = COALESCE(num_closed_issues,0)
+		WHERE repo_id=?`, accessor.repoID).Error
+	}
+
 	if err != nil {
 		err = errors.Wrapf(err, "updating number of issues for milestones")
 		return err
