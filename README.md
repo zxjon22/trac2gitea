@@ -61,9 +61,11 @@ The Gitea project must have been created prior to the migration as must the Gite
 ## Usage
 
 ```lang-none
-Usage: trac2gitea [options] <trac-root> <gitea-root> <gitea-user> <gitea-repo> [<user-map>] [<label-map>]
+Usage: ./trac2gitea [options] <trac-root> <gitea-root> <gitea-org> <gitea-repo> [<user-map>] [<label-map>] [<revision-map>]
 Options:
+      --app-ini string            Path to Gitea configuration file (app.ini). If not set, fetch the configuration from the standard locations. Useful if Gitea is running in a Docker container and you need a separate configuration file to reference the data on the host volumes.
       --db-only                   convert database only
+      --default-user string       Fallback Gitea user if a Trac user cannot be mapped to an existing Gitea user. Defaults to <gitea-org>
       --generate-maps             generate default user/label mappings into provided map files (note: no conversion will be performed in this case)
       --no-wiki-push              do not push wiki on completion
       --overwrite                 overwrite existing data (by default previously-imported issues, labels, wiki pages etc are skipped)
@@ -81,6 +83,7 @@ Options:
 * `<gitea-repo>` is the Gitea repository (project) name being migrated to
 * `<user-map>` is a file containing mappings from Trac users to Gitea user names - see below
 * `<label-map>` is a file containing mappings from Trac items to Gitea labels - see below
+* `<revision-map>` is a file containing mappings from `svn` revisions to corresponding `git commits` - see below
 
 ### User Mappings
 
@@ -121,20 +124,44 @@ The default mapping maps a Trac item name onto a Gitea label of the same name wh
 
 If the `<label-map>` parameter is omitted, the conversion will proceed using the default mapping.
 
+### Revision Mappings
+
+When using [Subgit](https://subgit.com/) to convert a `subversion` repository to `git`, [git-notes](https://git-scm.com/docs/git-notes) are attached to each commit created from the `svn` changeset, e.g.
+```lang-none
+r4640 myapp/trunk
+```
+
+These can easily be extracted and used as a `<revision-map>` file:
+```sh
+git log --all --format="%H=%N" > revisions.txt
+```
+
+This produces a file that looks like this:
+```lang-none
+e06f33e922f84aca19701889724ef858d6aef9a8=r3992 myapp/trunk
+c3f16196bdb1d25f8a8fa85bdad5a569cf481f2a=r3991 myapp/trunk
+3c8f9ed45c943f3d4817d65600cd254d20337ab1=r3990 myapp/trunk
+fca57ea123049cc56549c602e0daffc9c127fac6=r3987 myapp/trunk
+```
+
+Pass in this file as a `<revision-map`> and `trac2gitea` will re-write `svn` revision references in the ticket comments, e.g.:
+- `See r3992` becomes `See e06f33e922f84aca19701889724ef858d6aef9a8`
+- `Implemented in r3987-r3991` becomes `Implemented in fca57ea123049cc56549c602e0daffc9c127fac6..c3f16196bdb1d25f8a8fa85bdad5a569cf481f2a`
+
+if the `<revision-map>` parameter is omitted, the conversion will proceed without
+trying to map `svn` revisions to `git commits`.
+
 ## Limitations
 
-The current code is written for `sqlite` (for both the Trac and Gitea databases).
+The `gitea` access code has been re-written to use [GORM](https://gorm.io/) to support both `sqlite` and `mysql` as a target database.
 
-Most of the SQL used by the converter is fairly generic so porting to a different database type should hopefully not be particularly difficult.
+However, the `trac` access code is written for `sqlite` only.
 
 For anyone using a different database, the database connections are created in:
 
 * Trac: `accessor/trac/defaultAccessor.go`, func `CreateDefaultAccessor`
-* Gitea: `accessor/gitea/defaultAccessor.go`, func `CreateDefaultAccessor`
 
-Having changed these, try running the converter and see if any SQL breaks.
-
-All trac database accesses are in package `accessor.trac` and all Gitea database accesses are in package `accessor.gitea`.
+All trac database accesses are in package `accessor.trac`.
 
 ## Building
 
