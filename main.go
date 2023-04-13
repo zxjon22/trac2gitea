@@ -187,7 +187,7 @@ func createImporter() (*importer.Importer, error) {
 		return nil, err
 	}
 	giteaAccessor, err := gitea.CreateDefaultAccessor(
-		giteaRootDir, giteaMainConfigPath, giteaOrg, giteaRepo, giteaWikiRepoURL, giteaWikiRepoToken, giteaWikiRepoDir, overwrite, wikiPush)
+		giteaRootDir, giteaMainConfigPath, giteaOrg, giteaRepo, giteaWikiRepoURL, giteaWikiRepoToken, giteaWikiRepoDir, overwrite, wikiPush, dbOnly)
 	if err != nil {
 		return nil, err
 	}

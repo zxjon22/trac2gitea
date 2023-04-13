@@ -36,6 +36,7 @@ type DefaultAccessor struct {
 	wikiRepo      *git.Repository
 	overwrite     bool
 	pushWiki      bool
+	dbOnly        bool
 }
 
 func fetchConfig(configPath string) (*ini.File, error) {
@@ -64,7 +65,8 @@ func CreateDefaultAccessor(
 	giteaWikiRepoToken string,
 	giteaWikiRepoDir string,
 	overwriteData bool,
-	pushWiki bool) (*DefaultAccessor, error) {
+	pushWiki bool,
+	dbOnly bool) (*DefaultAccessor, error) {
 	stat, err := os.Stat(giteaRootDir)
 	if err != nil {
 		err = errors.Wrapf(err, "looking for root directory %s of Gitea instance", giteaRootDir)
@@ -125,6 +127,7 @@ func CreateDefaultAccessor(
 		wikiRepo:      nil,
 		overwrite:     overwriteData,
 		pushWiki:      pushWiki,
+		dbOnly:        dbOnly,
 	}
 
 	dialect, dbType, err := giteaAccessor.getDbDialect()
