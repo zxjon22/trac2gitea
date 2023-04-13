@@ -31,6 +31,13 @@ func (accessor *DefaultAccessor) UpdateMilestoneIssueCounts() error {
 		WHERE repo_id=?`, accessor.repoID).Error
 	}
 
+	if err == nil {
+		err = accessor.db.Exec(`
+		UPDATE milestone SET
+		completeness = CASE WHEN num_issues = 0 THEN 0 ELSE num_closed_issues * 100 / num_issues END
+		WHERE repo_id=?`, accessor.repoID).Error
+	}
+
 	if err != nil {
 		err = errors.Wrapf(err, "updating number of issues for milestones")
 		return err
