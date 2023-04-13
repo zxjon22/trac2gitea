@@ -11,7 +11,11 @@ func (accessor *DefaultAccessor) CommitTransaction() error {
 		return err
 	}
 
-	return accessor.commitWikiRepo()
+	if !accessor.dbOnly {
+		return accessor.commitWikiRepo()
+	}
+
+	return nil
 }
 
 // RollbackTransaction rolls back a Gitea transaction.
@@ -21,5 +25,9 @@ func (accessor *DefaultAccessor) RollbackTransaction() error {
 		return err
 	}
 
-	return accessor.rollbackWikiRepo()
+	if !accessor.dbOnly {
+		return accessor.rollbackWikiRepo()
+	}
+
+	return nil
 }
