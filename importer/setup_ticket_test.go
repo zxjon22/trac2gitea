@@ -57,6 +57,7 @@ var (
 	severityMap   map[string]string
 	typeMap       map[string]string
 	versionMap    map[string]string
+	revisionMap   map[string]string
 )
 
 func initMaps() {

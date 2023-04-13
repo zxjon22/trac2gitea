@@ -13,7 +13,7 @@ import (
 )
 
 // importTicketAttachment imports a single ticket attachment from Trac into Gitea, returns UUID if newly-created attachment or "" if attachment already existed
-func (importer *Importer) importTicketAttachment(issueID int64, tracAttachment *trac.TicketAttachment, userMap map[string]string) (string, error) {
+func (importer *Importer) importTicketAttachment(issueID int64, tracAttachment *trac.TicketAttachment, userMap, revisionMap map[string]string) (string, error) {
 	// convert attachment description into a Gitea issue comment
 	commentText := fmt.Sprintf("**Attachment** %s (%d bytes) added\n\n%s", tracAttachment.FileName, tracAttachment.Size, tracAttachment.Description)
 	tracChange := trac.TicketChange{
@@ -23,7 +23,7 @@ func (importer *Importer) importTicketAttachment(issueID int64, tracAttachment *
 		NewValue:   commentText,
 		Time:       tracAttachment.Time,
 	}
-	commentID, err := importer.importCommentIssueComment(issueID, &tracChange, userMap)
+	commentID, err := importer.importCommentIssueComment(issueID, &tracChange, userMap, revisionMap)
 	if err != nil {
 		return "", err
 	}
@@ -51,11 +51,11 @@ func (importer *Importer) importTicketAttachment(issueID int64, tracAttachment *
 	return uuid, nil
 }
 
-func (importer *Importer) importTicketAttachments(ticketID int64, issueID int64, lastUpdate int64, userMap map[string]string) (int64, error) {
+func (importer *Importer) importTicketAttachments(ticketID int64, issueID int64, lastUpdate int64, userMap, revisionMap map[string]string) (int64, error) {
 	attachmentLastUpdate := lastUpdate
 
 	err := importer.tracAccessor.GetTicketAttachments(ticketID, func(attachment *trac.TicketAttachment) error {
-		uuid, err := importer.importTicketAttachment(issueID, attachment, userMap)
+		uuid, err := importer.importTicketAttachment(issueID, attachment, userMap, revisionMap)
 		if err != nil {
 			return err
 		}

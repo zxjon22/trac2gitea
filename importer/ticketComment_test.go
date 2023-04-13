@@ -35,7 +35,7 @@ func TestImportTicketWithComments(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportMultipleTicketsWithComments(t *testing.T) {
@@ -74,7 +74,7 @@ func TestImportMultipleTicketsWithComments(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketWithCommentButNoTracUser(t *testing.T) {
@@ -105,7 +105,7 @@ func TestImportTicketWithCommentButNoTracUser(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketWithCommentButUnmappedTracUser(t *testing.T) {
@@ -136,5 +136,5 @@ func TestImportTicketWithCommentButUnmappedTracUser(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }

@@ -34,7 +34,7 @@ func TestImportTicketClose(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportTicketReopen(t *testing.T) {
@@ -65,5 +65,5 @@ func TestImportTicketReopen(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }

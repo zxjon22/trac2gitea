@@ -45,7 +45,7 @@ func TestImportTicketWithAttachmentsAndComments(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
 
 func TestImportMultipleTicketsWithAttachmentsAndComments(t *testing.T) {
@@ -92,5 +92,5 @@ func TestImportMultipleTicketsWithAttachmentsAndComments(t *testing.T) {
 	// expect all issue counts to be updated
 	expectIssueCountUpdates(t)
 
-	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap)
+	dataImporter.ImportTickets(userMap, componentMap, priorityMap, resolutionMap, severityMap, typeMap, versionMap, revisionMap)
 }
