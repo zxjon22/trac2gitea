@@ -169,6 +169,8 @@ type Label struct {
 	Name        string
 	Description string
 	Color       string
+	Created     int64 `gorm:"<-:create;autoCreateTime;column:created_unix"`
+	Updated     int64 `gorm:"autoUpdateTime;column:updated_unix"`
 }
 
 func (Label) TableName() string {
