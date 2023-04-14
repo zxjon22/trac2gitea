@@ -37,7 +37,7 @@ func (importer *Importer) createIssueComment(issueID int64, change *trac.TicketC
 		OldMilestoneID:     0,
 		MilestoneID:        0,
 		AssigneeID:         0,
-		RemovedAssigneeID:  0,
+		RemovedAssignee:    false,
 		OldTitle:           "",
 		Title:              "",
 		Text:               "",

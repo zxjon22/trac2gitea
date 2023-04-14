@@ -16,7 +16,9 @@ import (
 func (accessor *DefaultAccessor) GetIssueID(issueIndex int64) (int64, error) {
 	var id int64 = NullID
 	err := accessor.db.Model(&Issue{}).
-		Where("repo_id=? AND `index`=?", accessor.repoID, issueIndex).
+		Where("repo_id=?", accessor.repoID).
+		// Since index is a reserved word in some DBs
+		Where(map[string]interface{}{"index": issueIndex}).
 		Limit(1).
 		Pluck("id", &id).Error
 

@@ -31,7 +31,6 @@ func (importer *Importer) importOwnershipIssueComment(issueID int64, change *tra
 	}
 
 	assigneeID := gitea.NullID
-	removedAssigneeID := gitea.NullID
 	ownerName := change.NewValue
 	if ownerName != "" {
 		assigneeID, err = importer.getUserID(ownerName, userMap)
@@ -41,15 +40,31 @@ func (importer *Importer) importOwnershipIssueComment(issueID int64, change *tra
 		if assigneeID == gitea.NullID {
 			return gitea.NullID, nil // cannot map user onto Gitea
 		}
-	} else {
-		removedAssigneeID = prevOwnerID
 	}
 
-	issueComment.AssigneeID = assigneeID
-	issueComment.RemovedAssigneeID = removedAssigneeID
-	issueCommentID, err := importer.giteaAccessor.AddIssueComment(issueID, issueComment)
-	if err != nil {
-		return gitea.NullID, err
+	issueCommentID := gitea.NullID
+
+	if prevOwnerID != gitea.NullID {
+		removeOwnerComment := *issueComment // copy
+		removeOwnerComment.AssigneeID = prevOwnerID
+		removeOwnerComment.RemovedAssignee = true
+		// NOTE: The translation process is currently/ built around only returning
+		// one Gitea comment per Trac change so issueCommentID may get overwritten
+		// below
+		issueCommentID, err = importer.giteaAccessor.AddIssueComment(issueID, &removeOwnerComment)
+
+		if err != nil {
+			return gitea.NullID, err
+		}
+	}
+
+	if assigneeID != gitea.NullID {
+		issueComment.AssigneeID = assigneeID
+		issueComment.RemovedAssignee = false
+		issueCommentID, err = importer.giteaAccessor.AddIssueComment(issueID, issueComment)
+		if err != nil {
+			return gitea.NullID, err
+		}
 	}
 
 	return issueCommentID, nil

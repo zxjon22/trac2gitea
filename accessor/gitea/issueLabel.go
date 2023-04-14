@@ -69,9 +69,9 @@ func (accessor *DefaultAccessor) UpdateLabelIssueCounts() error {
 				FROM issue_label il2, issue i
 				WHERE l.id = il2.label_id
 				AND il2.issue_id = i.id
-				AND i.is_closed = 1
+				AND i.is_closed = ?
 				GROUP BY il2.label_id)
-		WHERE l.repo_id=?`, accessor.repoID).Error
+		WHERE l.repo_id=?`, true, accessor.repoID).Error
 
 	if err == nil {
 		err = accessor.db.Exec(`
