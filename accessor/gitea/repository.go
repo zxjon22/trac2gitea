@@ -42,7 +42,7 @@ func (accessor *DefaultAccessor) UpdateRepoIssueCounts() error {
 			Where("id=?", accessor.repoID).
 			Update("num_closed_issues", accessor.db.Model(&Issue{}).
 				Select("count(id)").
-				Where("is_closed=? AND repo_id=?", 1, accessor.repoID)).
+				Where("is_closed=? AND repo_id=?", true, accessor.repoID)).
 			Error
 	}
 
@@ -68,7 +68,7 @@ func (accessor *DefaultAccessor) UpdateRepoMilestoneCounts() error {
 			Where("id=?", accessor.repoID).
 			Update("num_closed_milestones", accessor.db.Model(&Milestone{}).
 				Select("count(id)").
-				Where("is_closed=? AND repo_id=?", 1, accessor.repoID)).
+				Where("is_closed=? AND repo_id=?", true, accessor.repoID)).
 			Error
 	}
 

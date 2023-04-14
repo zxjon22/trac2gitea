@@ -68,20 +68,36 @@ func expectIssueCommentCreationForOwnershipChange(t *testing.T, ticket *TicketIm
 	// expect to look up Gitea user corresponding to new ticket owner
 	expectUserLookup(t, ticketOwnership.owner)
 
-	mockGiteaAccessor.
-		EXPECT().
-		AddIssueComment(gomock.Eq(ticket.issueID), gomock.Any()).
-		DoAndReturn(func(issueID int64, issueComment *gitea.IssueComment) (int64, error) {
-			assertEquals(t, issueComment.CommentType, gitea.AssigneeIssueCommentType)
-			assertEquals(t, issueComment.AuthorID, ticketOwnership.author.giteaUserID)
-			if ticketOwnership.owner.tracUser != "" {
+	// If a previous owner was set, there should be an additional comment
+	// to remove them.
+	if ticketOwnership.prevOwner.tracUser != "" {
+		mockGiteaAccessor.
+			EXPECT().
+			AddIssueComment(gomock.Eq(ticket.issueID), gomock.Any()).
+			DoAndReturn(func(issueID int64, issueComment *gitea.IssueComment) (int64, error) {
+				assertEquals(t, issueComment.CommentType, gitea.AssigneeIssueCommentType)
+				assertEquals(t, issueComment.AuthorID, ticketOwnership.author.giteaUserID)
+				assertEquals(t, issueComment.AssigneeID, ticketOwnership.prevOwner.giteaUserID)
+				assertEquals(t, issueComment.RemovedAssignee, true)
+				assertEquals(t, issueComment.Time, ticketOwnership.time)
+				return ticketOwnership.issueCommentID, nil
+			})
+	}
+
+	if ticketOwnership.owner.tracUser != "" {
+		mockGiteaAccessor.
+			EXPECT().
+			AddIssueComment(gomock.Eq(ticket.issueID), gomock.Any()).
+			DoAndReturn(func(issueID int64, issueComment *gitea.IssueComment) (int64, error) {
+				assertEquals(t, issueComment.CommentType, gitea.AssigneeIssueCommentType)
+				assertEquals(t, issueComment.AuthorID, ticketOwnership.author.giteaUserID)
 				assertEquals(t, issueComment.AssigneeID, ticketOwnership.owner.giteaUserID)
-			} else {
-				assertEquals(t, issueComment.RemovedAssigneeID, ticketOwnership.prevOwner.giteaUserID)
-			}
-			assertEquals(t, issueComment.Time, ticketOwnership.time)
-			return ticketOwnership.issueCommentID, nil
-		})
+				assertEquals(t, issueComment.RemovedAssignee, false)
+				assertEquals(t, issueComment.Time, ticketOwnership.time)
+				return ticketOwnership.issueCommentID, nil
+			})
+	}
+
 	if ticketOwnership.author.giteaUser != "" {
 		expectIssueParticipantToBeAdded(t, ticket, ticketOwnership.author)
 	}

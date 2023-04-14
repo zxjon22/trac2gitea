@@ -153,11 +153,11 @@ trying to map `svn` revisions to `git commits`.
 
 ## Limitations
 
-The `gitea` access code has been re-written to use [GORM](https://gorm.io/) to support both `sqlite` and `mysql` as a target database.
+The `gitea` access code has been re-written to use [GORM](https://gorm.io/) to support a `sqlite`, `mysql` or `postgres` target database.
 
 However, the `trac` access code is written for `sqlite` only.
 
-For anyone using a different database, the database connections are created in:
+For anyone using a different trac database, the database connection is created in:
 
 * Trac: `accessor/trac/defaultAccessor.go`, func `CreateDefaultAccessor`
 

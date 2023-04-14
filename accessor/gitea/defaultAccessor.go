@@ -6,6 +6,7 @@ package gitea
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +16,7 @@ import (
 	"github.com/stevejefferson/trac2gitea/log"
 	"gopkg.in/src-d/go-git.v4"
 	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -208,7 +210,7 @@ func CreateDefaultAccessor(
 func getGormLogLevel() logger.LogLevel {
 	lvl := log.GetLevel()
 	if lvl == log.TRACE {
-		return logger.Warn
+		return logger.Info
 	} else {
 		return logger.Error
 	}
@@ -222,19 +224,27 @@ func (accessor *DefaultAccessor) getDbDialect() (gorm.Dialector, string, error) 
 	dbUser := accessor.GetStringConfig("database", "USER")
 	dbPassword := accessor.GetStringConfig("database", "PASSWD")
 	dbHost := accessor.GetStringConfig("database", "HOST")
+	dbSslMode := accessor.GetStringConfig("database", "SSL_MODE")
 	dbCharset := accessor.GetStringConfig("database", "CHARSET")
 
 	switch dbType {
 	case "sqlite3":
 		giteaDbPath := accessor.GetStringConfig("database", "PATH")
 		dialect = sqlite.Open(giteaDbPath)
+
 	case "mysql":
 		if dbCharset == "utf8" {
 			dbCharset = "utf8mb4"
 		}
 		connstr := fmt.Sprintf("%s:%s@tcp(%s)/%s?charset=%s&parseTime=True&loc=Local",
-			dbUser, dbPassword, dbHost, dbName, dbCharset)
+			url.PathEscape(dbUser), url.PathEscape(dbPassword), dbHost, dbName, dbCharset)
 		dialect = mysql.Open(connstr)
+
+	case "postgres":
+		connstr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
+			url.PathEscape(dbUser), url.PathEscape(dbPassword), dbHost, dbName, dbSslMode)
+		dialect = postgres.Open(connstr)
+
 	default:
 		return nil, "", errors.Errorf("Unknown Gitea database type, %s", dbType)
 	}

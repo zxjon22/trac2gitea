@@ -150,7 +150,7 @@ type IssueComment struct {
 	OldMilestoneID     int64
 	MilestoneID        int64
 	AssigneeID         int64
-	RemovedAssigneeID  int64 `gorm:"column:removed_assignee"`
+	RemovedAssignee    bool
 	OldTitle           string
 	Title              string `gorm:"column:new_title"`
 	Text               string `gorm:"column:content"`

@@ -19,9 +19,9 @@ func (accessor *DefaultAccessor) UpdateMilestoneIssueCounts() error {
 				SELECT COUNT(i2.id)
 				FROM issue i2
 				WHERE m.id = i2.milestone_id
-				AND i2.is_closed = 1
+				AND i2.is_closed = ?
 				GROUP BY i2.milestone_id)
-		WHERE m.repo_id=?`, accessor.repoID).Error
+		WHERE m.repo_id=?`, true, accessor.repoID).Error
 
 	if err == nil {
 		err = accessor.db.Exec(`
