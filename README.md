@@ -153,9 +153,12 @@ trying to map `svn` revisions to `git commits`.
 
 ## Limitations
 
-The `gitea` access code has been re-written to use [GORM](https://gorm.io/) to support a `sqlite`, `mysql` or `postgres` target database.
+The current `trac` access code is written for `sqlite` only.
 
-However, the `trac` access code is written for `sqlite` only.
+Most of the SQL used by the converter is fairly generic so porting to a different database type should hopefully not be particularly difficult.
+
+Ideally, adapting the trac code to use [GORM](https://gorm.io) (like the gitea code) to support
+multiple database types should be straight forward.
 
 For anyone using a different trac database, the database connection is created in:
 

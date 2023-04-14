@@ -56,7 +56,7 @@ func (Issue) TableName() string {
 }
 
 type IssueIndex struct {
-	RepoID   int64 `gorm:"primaryKey;column:group_id"`
+	RepoID   int64 `gorm:"primaryKey;autoIncrement:false;column:group_id"`
 	MaxIndex int64
 }
 
