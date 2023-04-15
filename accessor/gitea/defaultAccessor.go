@@ -18,6 +18,7 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
+	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -138,9 +139,10 @@ func CreateDefaultAccessor(
 	}
 
 	db, err := gorm.Open(dialect, &gorm.Config{
-		TranslateError: true,
-		QueryFields:    true,
-		Logger:         logger.Default.LogMode(getGormLogLevel()),
+		SkipDefaultTransaction: true,
+		TranslateError:         true,
+		QueryFields:            true,
+		Logger:                 logger.Default.LogMode(getGormLogLevel()),
 	})
 
 	if err != nil {
@@ -244,6 +246,11 @@ func (accessor *DefaultAccessor) getDbDialect() (gorm.Dialector, string, error) 
 		connstr := fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=%s",
 			url.PathEscape(dbUser), url.PathEscape(dbPassword), dbHost, dbName, dbSslMode)
 		dialect = postgres.Open(connstr)
+
+	case "mssql":
+		connstr := fmt.Sprintf("sqlserver://%s:%s@%s?database=%s",
+			url.PathEscape(dbUser), url.PathEscape(dbPassword), dbHost, dbName)
+		dialect = sqlserver.Open(connstr)
 
 	default:
 		return nil, "", errors.Errorf("Unknown Gitea database type, %s", dbType)

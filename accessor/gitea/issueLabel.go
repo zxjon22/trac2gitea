@@ -58,20 +58,20 @@ func (accessor *DefaultAccessor) AddIssueLabel(issueID int64, labelID int64) (in
 // UpdateLabelIssueCounts updates issue counts for all labels.
 func (accessor *DefaultAccessor) UpdateLabelIssueCounts() error {
 	err := accessor.db.Exec(`
-		UPDATE label AS l SET
+		UPDATE label SET
 			num_issues = (
 				SELECT COUNT(il1.issue_id)
 				FROM issue_label il1
-				WHERE l.id = il1.label_id
+				WHERE label.id = il1.label_id
 				GROUP BY il1.label_id),
 			num_closed_issues = (
 				SELECT COUNT(il2.issue_id)
 				FROM issue_label il2, issue i
-				WHERE l.id = il2.label_id
+				WHERE label.id = il2.label_id
 				AND il2.issue_id = i.id
 				AND i.is_closed = ?
 				GROUP BY il2.label_id)
-		WHERE l.repo_id=?`, true, accessor.repoID).Error
+		WHERE label.repo_id=?`, true, accessor.repoID).Error
 
 	if err == nil {
 		err = accessor.db.Exec(`

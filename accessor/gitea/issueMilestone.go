@@ -9,19 +9,19 @@ import "github.com/pkg/errors"
 // UpdateMilestoneIssueCounts updates issue counts for all milestones.
 func (accessor *DefaultAccessor) UpdateMilestoneIssueCounts() error {
 	err := accessor.db.Exec(`
-		UPDATE milestone AS m SET
+		UPDATE milestone SET
 			num_issues = (
 				SELECT COUNT(i1.id)
 				FROM issue i1
-				WHERE m.id = i1.milestone_id
+				WHERE milestone.id = i1.milestone_id
 				GROUP BY i1.milestone_id),
 			num_closed_issues = (
 				SELECT COUNT(i2.id)
 				FROM issue i2
-				WHERE m.id = i2.milestone_id
+				WHERE milestone.id = i2.milestone_id
 				AND i2.is_closed = ?
 				GROUP BY i2.milestone_id)
-		WHERE m.repo_id=?`, true, accessor.repoID).Error
+		WHERE milestone.repo_id=?`, true, accessor.repoID).Error
 
 	if err == nil {
 		err = accessor.db.Exec(`
