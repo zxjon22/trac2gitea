@@ -1,5 +1,7 @@
 # go installation
+ifndef GOPATH
 GOPATH=$(HOME)/go
+endif
 GOBINDIR=$(GOPATH)/bin
 
 # commands
