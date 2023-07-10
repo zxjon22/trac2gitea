@@ -11,7 +11,7 @@ func (accessor *DefaultAccessor) GetUserNames(handlerFn func(userName string) er
 	// find every conceivable place where a user name may be hiding
 	// some of these may be redundant but it does no harm
 	rows, err := accessor.db.Query(`
-		SELECT owner FROM ticket WHERE owner IS NOT NULL
+		SELECT owner FROM ticket WHERE owner IS NOT NULL and owner != ''
 		UNION SELECT author FROM attachment
 		UNION SELECT author FROM ticket_change
 		UNION SELECT oldvalue FROM ticket_change WHERE field='owner' AND oldvalue != ''
